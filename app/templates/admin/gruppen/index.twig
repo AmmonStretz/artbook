@@ -1,0 +1,89 @@
+{% extends 'base.twig' %}
+
+{% block content %}
+{% if flash %}
+  <div class="alert alert-{{ flash.type }}">{{ flash.msg }}</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">
+      Alle Gruppen
+      <span style="color:var(--text-muted);font-weight:400;font-size:.875rem">&nbsp;{{ total }}</span>
+    </span>
+    <div style="display:flex;gap:.5rem;align-items:center">
+      <form method="get" class="search-form">
+        <input type="search" name="q" value="{{ q }}"
+               placeholder="Suchen …" class="search-input" autocomplete="off">
+        {% if q %}
+          <a href="?" class="search-clear" title="Suche zurücksetzen">✕</a>
+        {% endif %}
+      </form>
+      <a href="/admin/gruppen/form.php" class="btn btn-primary btn-sm">
+        <i class="fa-solid fa-plus"></i>
+        Neue Gruppe
+      </a>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Typ</th>
+          <th style="text-align:center">Künstler</th>
+          <th>Link</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if not rows %}
+          <tr>
+            <td colspan="5" style="text-align:center;color:var(--text-muted);padding:2.5rem 1rem">
+              {{ q ? 'Keine Ergebnisse für «' ~ q ~ '».' : 'Noch keine Gruppen vorhanden.' }}
+            </td>
+          </tr>
+        {% endif %}
+        {% for r in rows %}
+          <tr>
+            <td class="cell-name">{{ r.name }}</td>
+            <td>
+              {% if r.gruppe_typ %}
+                <span class="badge badge-type">{{ GRUPPE_TYPEN[r.gruppe_typ]|default(r.gruppe_typ|capitalize) }}</span>
+              {% else %}
+                <span class="cell-muted">–</span>
+              {% endif %}
+            </td>
+            <td style="text-align:center;color:var(--text-muted)">{{ r.anzahl_kuenstler }}</td>
+            <td>
+              {% if r.link %}
+                <a href="{{ r.link }}" target="_blank" rel="noopener"
+                   class="cell-link" title="{{ r.link }}">
+                  <i class="fa-solid fa-link"></i>Link
+                </a>
+              {% else %}
+                <span class="cell-muted">–</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="actions">
+                <a href="/admin/gruppen/form.php?id={{ r.id }}" class="btn btn-secondary btn-sm">Bearbeiten</a>
+                <a href="/admin/gruppen/form.php?copy={{ r.id }}" class="btn btn-ghost btn-sm">
+                  <i class="fa-regular fa-copy"></i>Kopieren</a>
+                <a href="/admin/gruppen/delete.php?id={{ r.id }}" class="btn btn-ghost btn-sm"
+                   style="color:var(--danger)">Löschen</a>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% include 'partials/pagination.twig' with {
+    page: page, pages: pages, total: total, offset: offset, per_page: per_page,
+    pagination_base: q ? '?q=' ~ q|url_encode : ''
+  } %}
+</div>
+{% endblock %}

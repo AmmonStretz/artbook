@@ -1,0 +1,66 @@
+{% extends 'base.twig' %}
+
+{% block content %}
+{% if flash %}
+  <div class="alert alert-{{ flash.type }}" style="max-width:860px">{{ flash.msg }}</div>
+{% endif %}
+
+<div style="max-width:860px;margin-bottom:1.25rem;display:flex;align-items:center;justify-content:space-between;gap:1rem">
+  <div>
+    <a href="/admin/veranstaltungen/form.php?id={{ vid }}" class="btn btn-ghost btn-sm">
+      ← {{ event.name }}
+    </a>
+  </div>
+  <a href="/admin/veranstaltungen/programm/form.php?veranstaltung_id={{ vid }}" class="btn btn-primary btn-sm">
+    <i class="fa-solid fa-plus"></i>
+    Programmpunkt hinzufügen
+  </a>
+</div>
+
+{% if not by_day %}
+  <div class="card" style="max-width:860px">
+    <div class="card-body">
+      <p style="color:var(--text-muted);margin:0">Noch keine Programmpunkte vorhanden.</p>
+    </div>
+  </div>
+{% else %}
+  {% for datum, entries in by_day %}
+    <div class="card" style="max-width:860px;margin-bottom:1rem">
+      <div class="card-header">
+        <span class="card-title">{{ fmtWeekday(datum) }}, {{ fmt(datum) }}</span>
+      </div>
+      <div style="padding:0">
+        <table style="width:100%;border-collapse:collapse">
+          <tbody>
+            {% for e in entries %}
+              <tr style="border-bottom:1px solid var(--border)">
+                <td style="padding:.625rem 1.25rem;width:60px;white-space:nowrap;color:var(--text-muted);font-size:.875rem;font-variant-numeric:tabular-nums">
+                  {{ e.uhrzeit|slice(0, 5) }}
+                </td>
+                <td style="padding:.625rem 0">
+                  <div style="font-size:.9375rem;color:var(--text-base);font-weight:500">
+                    {{ e.titel|striptags }}
+                  </div>
+                  {% if e.ort_name %}
+                    <div style="font-size:.8125rem;color:var(--text-muted)">{{ e.ort_name }}</div>
+                  {% endif %}
+                  {% if e.tn_count %}
+                    <div style="font-size:.75rem;color:var(--text-muted)">{{ e.tn_count }} Mitwirkende</div>
+                  {% endif %}
+                </td>
+                <td style="padding:.625rem 1.25rem;white-space:nowrap;text-align:right">
+                  <a href="/admin/veranstaltungen/programm/form.php?veranstaltung_id={{ vid }}&id={{ e.id }}"
+                     class="btn btn-ghost btn-sm">Bearbeiten</a>
+                  <a href="/admin/veranstaltungen/programm/delete.php?veranstaltung_id={{ vid }}&id={{ e.id }}"
+                     class="btn btn-ghost btn-sm" style="color:var(--danger)"
+                     onclick="return confirm('Programmpunkt wirklich löschen?')">Löschen</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% endfor %}
+{% endif %}
+{% endblock %}

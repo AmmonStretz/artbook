@@ -1,0 +1,21 @@
+.pub-wrap {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.pub-main {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4rem;
+  .center {
+    align-self: center;
+  }
+}
+
+.container {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 0 2rem;
+}

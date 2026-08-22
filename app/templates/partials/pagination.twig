@@ -1,0 +1,32 @@
+{% if pages > 1 %}
+  {% set sep = '?' in pagination_base ? '&' : '?' %}
+  {% set range_start = max(1, page - 2) %}
+  {% set range_end = min(pages, page + 2) %}
+  <div class="pub-pagination">
+    <a href="{{ pagination_base }}{{ sep }}page={{ page - 1 }}" class="pub-page-link {{ page <= 1 ? 'disabled' : '' }}">‹</a>
+
+    {% if range_start > 1 %}
+      <a href="{{ pagination_base }}{{ sep }}page=1" class="pub-page-link">1</a>
+      {% if range_start > 2 %}
+        <span class="pub-page-ellipsis"><i class="fa-solid fa-ellipsis"></i></span>
+      {% endif %}
+    {% endif %}
+
+    {% for i in range_start..range_end %}
+      {% if i == page %}
+        <span class="pub-page-link active">{{ i }}</span>
+      {% else %}
+        <a href="{{ pagination_base }}{{ sep }}page={{ i }}" class="pub-page-link">{{ i }}</a>
+      {% endif %}
+    {% endfor %}
+
+    {% if range_end < pages %}
+      {% if range_end < pages - 1 %}
+        <span class="pub-page-ellipsis"><i class="fa-solid fa-ellipsis"></i></span>
+      {% endif %}
+      <a href="{{ pagination_base }}{{ sep }}page={{ pages }}" class="pub-page-link">{{ pages }}</a>
+    {% endif %}
+
+    <a href="{{ pagination_base }}{{ sep }}page={{ page + 1 }}" class="pub-page-link {{ page >= pages ? 'disabled' : '' }}">›</a>
+  </div>
+{% endif %}

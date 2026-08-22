@@ -1,0 +1,31 @@
+{% extends 'base.twig' %}
+
+{% block content %}
+<div class="tiles">
+
+  <a href="/admin/veranstaltungen/" class="tile">
+    <div class="tile-icon"><i class="fa-regular fa-calendar"></i></div>
+    <div class="tile-count">{{ count_veranstaltungen }}</div>
+    <div class="tile-label">Veranstaltungen</div>
+  </a>
+
+  <a href="/admin/kuenstler/" class="tile">
+    <div class="tile-icon"><i class="fa-solid fa-user"></i></div>
+    <div class="tile-count">{{ count_kuenstler }}</div>
+    <div class="tile-label">Künstler</div>
+  </a>
+
+  <a href="/admin/gruppen/" class="tile">
+    <div class="tile-icon"><i class="fa-solid fa-users"></i></div>
+    <div class="tile-count">{{ count_gruppen }}</div>
+    <div class="tile-label">Gruppen</div>
+  </a>
+
+  <a href="/admin/bilder/" class="tile">
+    <div class="tile-icon"><i class="fa-regular fa-image"></i></div>
+    <div class="tile-count">{{ count_bilder }}</div>
+    <div class="tile-label">Bilder</div>
+  </a>
+
+</div>
+{% endblock %}

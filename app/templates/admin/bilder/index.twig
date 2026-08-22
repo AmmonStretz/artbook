@@ -1,0 +1,122 @@
+{% extends 'base.twig' %}
+
+{% block content %}
+{% if not bilder %}
+  <p style="color:var(--text-muted);font-size:.9375rem">Noch keine Bilder vorhanden.</p>
+{% else %}
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+  <p style="color:var(--text-muted);font-size:.875rem">
+    {{ total }} {{ total == 1 ? 'Bild' : 'Bilder' }} gesamt
+  </p>
+</div>
+
+<div class="bild-grid">
+  {% for b in bilder %}
+    <div class="bild-card" data-quelle="{{ b.quelle }}" data-quelle-id="{{ b.quelle_id }}">
+      <div class="bild-thumb-wrap" onclick="bildPreview('{{ b.url_full|escape('js') }}',{{ b.quelle_id }},'{{ b.titel|default('')|escape('js') }}')">
+        <img class="bild-thumb" src="{{ b.url }}" alt="{{ b.alt_text|default('') }}" loading="lazy">
+        <span class="bild-id">#{{ b.quelle_id }}</span>
+      </div>
+      <div class="bild-owner">
+        <span class="badge {{ b.badge_cls }}">{{ b.badge_label }}</span>
+        <a href="{{ b.owner_url }}" class="cell-link">{{ b.owner_name }}</a>
+      </div>
+      {% if b.quelle == 'teilnehmer' %}
+      <div class="bild-meta">
+        <input type="text" class="bild-titel" placeholder="Titel" value="{{ b.titel|default('') }}">
+        <input type="text" class="bild-alt"   placeholder="Alternativtext" value="{{ b.alt_text|default('') }}">
+        <input type="date" class="bild-datum" title="Startdatum" value="{{ b.startdatum|default('') }}">
+      </div>
+      {% endif %}
+      <div class="bild-actions">
+        {% if b.quelle == 'teilnehmer' %}
+          <button type="button" class="btn btn-secondary btn-sm" style="flex:1"
+                  onclick="bildSave(this,{{ b.quelle_id }})">Speichern</button>
+        {% endif %}
+        <button type="button" class="btn btn-ghost btn-sm" style="color:var(--danger)"
+                onclick="bildDelete(this)" title="Löschen">
+          <i class="fa-solid fa-trash" aria-hidden="true"></i>
+        </button>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+{% include 'partials/pagination.twig' with {
+  page: page, pages: pages, total: total, offset: offset, per_page: per_page,
+  pagination_base: ''
+} %}
+
+{% endif %}
+
+<dialog id="bild-preview-dialog" class="bild-preview-dialog">
+  <div class="bild-preview-header">
+    <span id="bild-preview-label"></span>
+    <button type="button" class="btn btn-ghost btn-sm" style="color:#e2e8f0"
+            onclick="document.getElementById('bild-preview-dialog').close()">✕</button>
+  </div>
+  <img id="bild-preview-img" src="" alt=""
+       style="display:block;max-width:88vw;max-height:80vh;object-fit:contain">
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('bild-preview-dialog').addEventListener('click', function(e) {
+  if (e.target === this) this.close();
+});
+
+function bildPreview(url, id, titel) {
+  document.getElementById('bild-preview-img').src = url;
+  document.getElementById('bild-preview-label').textContent =
+    (titel || '') + (titel ? ' · ' : '') + '#' + id;
+  document.getElementById('bild-preview-dialog').showModal();
+}
+
+async function bildSave(btn, id) {
+  const card    = btn.closest('.bild-card');
+  const fd      = new FormData();
+  fd.append('bild_id',  id);
+  fd.append('titel',    card.querySelector('.bild-titel').value.trim());
+  fd.append('alt_text', card.querySelector('.bild-alt').value.trim());
+  const datumEl = card.querySelector('.bild-datum');
+  if (datumEl) fd.append('startdatum', datumEl.value);
+  btn.disabled = true; btn.textContent = '…';
+  try {
+    const r = await fetch('/admin/bilder/update.php', { method: 'POST', body: fd });
+    const d = await r.json();
+    btn.textContent = d.ok ? '✓ Gespeichert' : 'Fehler';
+    setTimeout(() => { btn.disabled = false; btn.textContent = 'Speichern'; }, 1800);
+  } catch { btn.disabled = false; btn.textContent = 'Speichern'; }
+}
+
+async function bildDelete(btn) {
+  if (!confirm('Dieses Bild unwiderruflich löschen?')) return;
+  btn.disabled = true;
+  const card   = btn.closest('.bild-card');
+  const quelle = card.dataset.quelle;
+  const id     = card.dataset.quelleId;
+  const fd     = new FormData();
+
+  let url;
+  if (quelle === 'veranstaltung') {
+    fd.append('veranstaltung_id', id);
+    url = '/admin/veranstaltungen/titelbild_delete.php';
+  } else {
+    fd.append('bild_id', id);
+    url = '/admin/bilder/delete.php';
+  }
+
+  try {
+    const r = await fetch(url, { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.ok) {
+      card.style.transition = 'opacity .2s';
+      card.style.opacity    = '0';
+      setTimeout(() => card.remove(), 220);
+    } else { btn.disabled = false; }
+  } catch { btn.disabled = false; }
+}
+</script>
+{% endblock %}

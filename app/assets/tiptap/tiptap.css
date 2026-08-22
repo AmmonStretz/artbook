@@ -1,0 +1,93 @@
+/* TipTap editor – toolbar */
+.tt-wrap {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #fff;
+}
+.tt-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-muted, #f8fafc);
+  border-radius: 4px 4px 0 0;
+  flex-wrap: nowrap;
+}
+.tt-btn {
+  background: none;
+  border: none;
+  padding: 5px 9px;
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: .875rem;
+  font-family: inherit;
+  color: var(--text, #1e293b);
+  line-height: 1.4;
+  min-width: 30px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.tt-btn:hover     { background: var(--border, #e2e8f0); }
+.tt-btn.is-active { background: var(--primary, #2563eb); color: #fff; }
+.tt-toolbar .tt-heading-sel {
+  border: 1px solid var(--border, #e2e8f0);
+  background: none;
+  font-size: .875rem;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 5px 6px;
+  border-radius: 3px;
+  color: var(--text, #1e293b);
+  flex-shrink: 0;
+  width: auto;
+  box-shadow: none;
+}
+.tt-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--border, #e2e8f0);
+  margin: 0 4px;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+/* ProseMirror content area */
+.tt-wrap .ProseMirror {
+  padding: .5rem .625rem;
+  outline: none;
+  min-height: 120px;
+}
+.tt-wrap.tt-small .ProseMirror { min-height: 32px; }
+.tt-wrap .ProseMirror > * + *  { margin-top: .5em; }
+.tt-wrap .ProseMirror p        { margin: 0; }
+.tt-wrap .ProseMirror ul,
+.tt-wrap .ProseMirror ol       { padding-left: 1.5rem; }
+.tt-wrap .ProseMirror h2       { font-size: 1.125rem; font-weight: 600; }
+.tt-wrap .ProseMirror h3       { font-size: 1rem;     font-weight: 600; }
+.tt-wrap .ProseMirror a        { color: var(--primary, #2563eb); text-decoration: underline; }
+
+/* HTML source view */
+.tt-wrap .tt-html-view {
+  width: 100%;
+  min-height: 120px;
+  padding: .5rem .625rem;
+  font-family: ui-monospace, monospace;
+  font-size: .8125rem;
+  border: none;
+  border-radius: 0 0 4px 4px;
+  resize: vertical;
+  color: var(--text, #1e293b);
+  background: #fff;
+  box-sizing: border-box;
+}
+.tt-wrap.tt-small .tt-html-view { min-height: 32px; }
+
+/* Placeholder */
+.tt-wrap .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--text-muted, #94a3b8);
+  pointer-events: none;
+  float: left;
+  height: 0;
+}

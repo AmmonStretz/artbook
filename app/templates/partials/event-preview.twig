@@ -1,0 +1,99 @@
+{% if active_event %}
+  {% set hero_img = titelbildHeroUrl(active_event.titelbild ?? null) %}
+  {% set hero_img_sm = titelbildCardUrl(active_event.titelbild ?? null) %}
+  {% set event_name = (lang == 'en' and active_event.name_en) ? active_event.name_en : active_event.name %}
+  <section class="center event-preview">
+    <article class="event-card">
+      {% if in_bewerbung %}
+        <a href="{{ langUrl('/kontakt.php') }}" class="pub-btn pub-btn-outline event-application-btn">
+          <i class="fa-solid fa-file-signature"></i>
+          {{ t('event.apply_now') }}
+        </a>
+      {% endif %}
+      <div class="event-preview-hero">
+        <div class="event-preview-image">
+          {% if hero_img %}
+            <picture>
+              {% if hero_img_sm %}
+                <source media="(max-width: 768px)" srcset="{{ hero_img_sm }}">
+              {% endif %}
+              <img src="{{ hero_img }}" alt="{{ event_name }}">
+            </picture>
+          {% endif %}
+        </div>
+        <div class="event-preview-content">
+          <div class="headline">
+            <h2><span>{{ event_name }}</span></h2>
+          </div>
+          <div class="event-preview-meta">
+            <div class="event-preview-time">
+              {% if active_event.erster_tag %}
+                {% set same = active_event.letzter_tag == active_event.erster_tag %}
+                <div class="start-date">{{ same ? '' : (lang == 'en' ? 'from ' : 'von ') }}<time datetime="{{ active_event.erster_tag }}">{{ fmt(active_event.erster_tag) }}</time></div>
+                {% if not same %}
+                  <div class="end-date">{{ lang == 'en' ? 'to' : 'bis' }} <time datetime="{{ active_event.letzter_tag }}">{{ fmt(active_event.letzter_tag) }}</time></div>
+                {% endif %}
+              {% endif %}
+            </div>
+            {% if event_state == 'nachher' %}
+              {% if lang == 'en' and meta.nachher_text_en %}
+                <div>{{ meta.nachher_text_en|raw }}</div>
+              {% elseif meta.nachher_text %}
+                <div>{{ meta.nachher_text|raw }}</div>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% if event_state != 'nachher' %}
+        <div class="event-preview-kurz">
+          {% set kurz = (lang == 'en' and active_event.kurzbeschreibung_en) ? active_event.kurzbeschreibung_en : active_event.kurzbeschreibung %}
+          {% if kurz %}
+            <div class="inner">
+              {{ kurz|raw }}
+              <a href="{{ langUrl('/veranstaltung.php') }}?id={{ active_event.id }}" class="pub-btn pub-btn-primary event-main-btn">
+                {{ lang == 'en' ? 'View Event' : 'Zur Veranstaltung' }} <i class="fa-solid fa-arrow-right" style="margin-left:.25rem;font-size:.8em"></i>
+              </a>
+            </div>
+          {% endif %}
+        </div>
+      {% endif %}
+    </article>
+  </section>
+
+  {% if event_state != 'nachher' and preview_tn %}
+    <section class="section">
+      <div class="container">
+        <div class="section-label" style="margin-bottom:1.5rem">{{ t('event.participants') }}</div>
+        <div class="participant-preview-wrap">
+          <div class="participant-grid">
+            {% for tn in preview_tn %}
+              {% set thumb = thumbUrl(tn.first_image) %}
+              {% set type_label = typeLabel(tn.typ, tn.gruppe_typ) %}
+              <div class="participant-card participant-card--static">
+                {% if thumb %}
+                  <img src="{{ thumb }}" alt="{{ tn.name }}" class="participant-thumb" loading="lazy">
+                {% else %}
+                  <div class="participant-thumb-placeholder">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <rect x="3" y="3" width="18" height="18" rx="2"/>
+                      <circle cx="8.5" cy="8.5" r="1.5"/>
+                      <polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                  </div>
+                {% endif %}
+                <div class="participant-info">
+                  <div class="participant-name">{{ tn.name }}</div>
+                  <div class="participant-type">{{ type_label }}</div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+          <a href="{{ langUrl('/kuenstler.php') }}?veranstaltung={{ active_vid }}" class="pub-btn pub-btn-outline participant-preview-btn">
+            {{ t('event.view_all_participants') }}
+          </a>
+        </div>
+      </div>
+    </section>
+  {% endif %}
+{% endif %}

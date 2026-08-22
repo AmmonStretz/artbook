@@ -1,0 +1,43 @@
+services:
+
+  db:
+    image: mysql:8.0
+    container_name: a2_db
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    image: a2_app_image
+    container_name: a2_app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./app:/var/www/html          # Code liegt im Volume — kein Neustart nötig
+      - ./uploads:/var/www/html/uploads  # Bild-Uploads persistent
+      - ./docker/php.ini:/usr/local/etc/php/conf.d/custom.ini:ro
+    ports:
+      - "8000:80"
+    environment:
+      DB_HOST: db
+      DB_NAME: ${MYSQL_DATABASE}
+      DB_USER: ${APP_DB_USER}
+      DB_PASSWORD: ${APP_DB_PASSWORD}
+
+volumes:
+  mysql_data:

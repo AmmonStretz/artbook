@@ -1,0 +1,235 @@
+{% extends 'base.twig' %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="/assets/tiptap/tiptap.css">
+<link rel="stylesheet" href="/assets/flatpickr/flatpickr.min.css">
+{% endblock %}
+
+{% block content %}
+{% if flash %}
+  <div class="alert alert-{{ flash.type }}" style="max-width:860px">{{ flash.msg }}</div>
+{% endif %}
+
+<form method="post" id="meta-form" style="display:flex;flex-direction:column;gap:1.25rem;max-width:860px">
+
+  <div class="card">
+    <div class="card-header"><span class="card-title">Einladungstext</span></div>
+    <div class="card-body">
+      <div class="lang-tabs">
+        <button type="button" class="lang-tab active" onclick="switchTab(this,'ein','de')">DE</button>
+        <button type="button" class="lang-tab" onclick="switchTab(this,'ein','en')">EN</button>
+      </div>
+      <div class="lang-panel" id="ein-panel-de">
+        <div id="quill-einladung"></div>
+        <input type="hidden" name="einladung" id="einladung-input" value="{{ meta.einladung|default('') }}">
+      </div>
+      <div class="lang-panel" id="ein-panel-en" style="display:none">
+        <div id="quill-einladung-en"></div>
+        <input type="hidden" name="einladung_en" id="einladung-en-input" value="{{ meta.einladung_en|default('') }}">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="card-title">Impressum</span></div>
+    <div class="card-body">
+      <div class="lang-tabs">
+        <button type="button" class="lang-tab active" onclick="switchTab(this,'imp','de')">DE</button>
+        <button type="button" class="lang-tab" onclick="switchTab(this,'imp','en')">EN</button>
+      </div>
+      <div class="lang-panel" id="imp-panel-de">
+        <div id="quill-impressum"></div>
+        <input type="hidden" name="impressum" id="impressum-input" value="{{ meta.impressum|default('') }}">
+      </div>
+      <div class="lang-panel" id="imp-panel-en" style="display:none">
+        <div id="quill-impressum-en"></div>
+        <input type="hidden" name="impressum_en" id="impressum-en-input" value="{{ meta.impressum_en|default('') }}">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="card-title">Kontaktdaten</span></div>
+    <div class="card-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Telefon 1</label>
+          <input type="text" name="kontakt_tel1" placeholder="+49 (0) 178 …"
+                 value="{{ meta.kontakt_tel1|default('') }}">
+        </div>
+        <div class="form-group">
+          <label>Telefon 2</label>
+          <input type="text" name="kontakt_tel2" placeholder="+31 (0) 6 …"
+                 value="{{ meta.kontakt_tel2|default('') }}">
+        </div>
+        <div class="form-group">
+          <label>Fon / Fax</label>
+          <input type="text" name="kontakt_fax" placeholder="+49 (0) 30 …"
+                 value="{{ meta.kontakt_fax|default('') }}">
+        </div>
+        <div class="form-group">
+          <label>E-Mail</label>
+          <input type="email" name="kontakt_email" placeholder="info@…"
+                 value="{{ meta.kontakt_email|default('') }}">
+        </div>
+        <div class="form-group span-2">
+          <label>Adresse</label>
+          <input type="text" name="kontakt_adresse" placeholder="Straße, PLZ Ort"
+                 value="{{ meta.kontakt_adresse|default('') }}">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="card-title">Text nach der Veranstaltung</span></div>
+    <div class="card-body">
+      <p class="bild-hint" style="margin-bottom:.75rem">Wird auf der Startseite angezeigt, solange die abgelaufene Veranstaltung noch sichtbar ist (bis 7 Tage nach Ende).</p>
+      <div class="lang-tabs">
+        <button type="button" class="lang-tab active" onclick="switchTab(this,'nach','de')">DE</button>
+        <button type="button" class="lang-tab" onclick="switchTab(this,'nach','en')">EN</button>
+      </div>
+      <div class="lang-panel" id="nach-panel-de">
+        <div id="quill-nachher"></div>
+        <input type="hidden" name="nachher_text" id="nachher-input" value="{{ meta.nachher_text|default('') }}">
+      </div>
+      <div class="lang-panel" id="nach-panel-en" style="display:none">
+        <div id="quill-nachher-en"></div>
+        <input type="hidden" name="nachher_text_en" id="nachher-en-input" value="{{ meta.nachher_text_en|default('') }}">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="card-title">Bewerbung</span></div>
+    <div class="card-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Aktive Veranstaltung</label>
+          <select name="bewerbung_veranstaltung_id">
+            <option value="">– keine –</option>
+            {% for va in veranstaltungen %}
+              <option value="{{ va.id }}"
+                {{ (meta.bewerbung_veranstaltung_id|default('')) == va.id ? 'selected' : '' }}>
+                {{ va.name }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Einsendeschluss</label>
+          <input type="text" name="bewerbung_deadline" id="bewerbung-deadline"
+                 value="{{ meta.bewerbung_deadline|default('') }}" placeholder="TT.MM.JJJJ">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="padding-bottom:.5rem">
+    <button type="submit" class="btn btn-primary">Einstellungen speichern</button>
+  </div>
+
+</form>
+
+<div style="max-width:860px;margin-top:0">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Bewerbungsformular</span>
+      <label class="btn btn-primary btn-sm" style="cursor:pointer">
+        <i class="fa-solid fa-upload"></i>
+        {{ meta.bewerbung_formular|default('') ? 'Ersetzen' : 'Hochladen' }}
+        <input type="file" id="formular-input" accept=".pdf,.jpg,.jpeg,.png,.webp" hidden>
+      </label>
+    </div>
+    <div class="card-body">
+      <p class="bild-hint">PDF, JPEG, PNG oder WebP</p>
+      <div id="formular-error"></div>
+      <div id="formular-wrap">
+        {% if meta.bewerbung_formular|default('') %}
+          <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap">
+            <a href="{{ META_UPLOAD_URL ~ meta.bewerbung_formular }}"
+               target="_blank" class="btn btn-secondary btn-sm">
+              {{ meta.bewerbung_formular_name|default(meta.bewerbung_formular) }}
+            </a>
+            <button type="button" class="btn btn-ghost btn-sm" style="color:var(--danger)"
+                    onclick="formularDelete()">Entfernen</button>
+          </div>
+        {% else %}
+          <p class="bild-empty">Kein Formular hochgeladen.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/assets/flatpickr/flatpickr.min.js"></script>
+<script src="/assets/flatpickr/l10n/de.js"></script>
+<script type="module">
+import { mkEditor, edHTML } from '/assets/tiptap/init.js';
+
+window.switchTab = function(btn, prefix, lang) {
+  const body = btn.closest('.card-body');
+  body.querySelectorAll('.lang-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  body.querySelectorAll('.lang-panel').forEach(p => p.style.display = 'none');
+  document.getElementById(prefix + '-panel-' + lang).style.display = '';
+};
+
+const edNachher   = mkEditor(document.getElementById('quill-nachher'),    { placeholder: 'Danke-Text eingeben …',     initialHTML: {{ meta.nachher_text|default('')|json_encode|raw }} });
+const edNachherEN = mkEditor(document.getElementById('quill-nachher-en'), { placeholder: 'Post-event text …',         initialHTML: {{ meta.nachher_text_en|default('')|json_encode|raw }} });
+const edEin       = mkEditor(document.getElementById('quill-einladung'),    { placeholder: 'Einladungstext eingeben …', initialHTML: {{ meta.einladung|default('')|json_encode|raw }} });
+const edEinEN     = mkEditor(document.getElementById('quill-einladung-en'), { placeholder: 'Invitation text …',        initialHTML: {{ meta.einladung_en|default('')|json_encode|raw }} });
+const edImp       = mkEditor(document.getElementById('quill-impressum'),    { placeholder: 'Impressum eingeben …',     initialHTML: {{ meta.impressum|default('')|json_encode|raw }} });
+const edImpEN     = mkEditor(document.getElementById('quill-impressum-en'), { placeholder: 'Legal notice …',           initialHTML: {{ meta.impressum_en|default('')|json_encode|raw }} });
+
+document.getElementById('meta-form').addEventListener('submit', () => {
+  document.getElementById('einladung-input').value    = edHTML(edEin);
+  document.getElementById('einladung-en-input').value = edHTML(edEinEN);
+  document.getElementById('impressum-input').value    = edHTML(edImp);
+  document.getElementById('impressum-en-input').value = edHTML(edImpEN);
+  document.getElementById('nachher-input').value      = edHTML(edNachher);
+  document.getElementById('nachher-en-input').value   = edHTML(edNachherEN);
+});
+</script>
+<script>
+
+flatpickr('#bewerbung-deadline', {
+  locale: 'de', dateFormat: 'Y-m-d', altInput: true, altFormat: 'd.m.Y', allowInput: true,
+});
+
+document.getElementById('formular-input').addEventListener('change', async function() {
+  const file = this.files[0];
+  if (!file) return;
+  this.value = '';
+  const fd = new FormData();
+  fd.append('datei', file);
+  const errEl = document.getElementById('formular-error');
+  errEl.innerHTML = '';
+  try {
+    const r = await fetch('/admin/meta/formular_upload.php', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.error) { errEl.innerHTML = `<p class="bild-error">${d.error}</p>`; return; }
+    document.getElementById('formular-wrap').innerHTML =
+      `<div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap">
+        <a href="${d.url}" target="_blank" class="btn btn-secondary btn-sm">${d.name}</a>
+        <button type="button" class="btn btn-ghost btn-sm" style="color:var(--danger)"
+                onclick="formularDelete()">Entfernen</button>
+      </div>`;
+  } catch { errEl.innerHTML = '<p class="bild-error">Upload fehlgeschlagen</p>'; }
+});
+
+async function formularDelete() {
+  if (!confirm('Formular unwiderruflich entfernen?')) return;
+  try {
+    const r = await fetch('/admin/meta/formular_delete.php', { method: 'POST' });
+    const d = await r.json();
+    if (d.ok) {
+      document.getElementById('formular-wrap').innerHTML =
+        '<p class="bild-empty">Kein Formular hochgeladen.</p>';
+    }
+  } catch {}
+}
+</script>
+{% endblock %}

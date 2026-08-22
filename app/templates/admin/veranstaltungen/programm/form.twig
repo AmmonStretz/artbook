@@ -1,0 +1,130 @@
+{% extends 'base.twig' %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="/assets/quill/quill.snow.css">
+{% endblock %}
+
+{% block content %}
+{% if errors %}
+  <div class="alert alert-error" style="max-width:860px">
+    {% for e in errors %}<div>{{ e }}</div>{% endfor %}
+  </div>
+{% endif %}
+
+<form method="post" id="main-form" style="max-width:860px" novalidate>
+  <input type="hidden" name="veranstaltung_id" value="{{ vid }}">
+  <input type="hidden" name="return" value="{{ return_val }}">
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">{{ page_title }}</span>
+      <a href="{{ back_url }}" class="btn btn-ghost btn-sm">← {{ event.name }}</a>
+    </div>
+    <div class="card-body">
+
+      <div class="form-grid">
+
+        {% if not is_edit and preselect_datum and has_datum_param %}
+          <div class="form-group">
+            <label>Tag</label>
+            <div class="form-control-static">{{ fmtWeekday(preselect_datum) }}, {{ fmt(preselect_datum) }}</div>
+            <input type="hidden" name="datum" value="{{ preselect_datum }}">
+          </div>
+        {% else %}
+          <div class="form-group">
+            <label for="datum">Tag <span class="req">*</span></label>
+            <select id="datum" name="datum" required>
+              {% for d in days %}
+                <option value="{{ d }}" {{ v.datum == d ? 'selected' : '' }}>
+                  {{ fmtWeekday(d) }}, {{ fmt(d) }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+        {% endif %}
+
+        <div class="form-group">
+          <label for="uhrzeit">Uhrzeit <span class="req">*</span></label>
+          <input type="time" id="uhrzeit" name="uhrzeit"
+                 value="{{ v.uhrzeit|default('')|slice(0, 5) }}" required>
+        </div>
+
+        <div class="form-group span-2">
+          <label for="ort_name">Ort <span style="color:var(--text-muted);font-weight:400">(optional)</span></label>
+          <input type="text" id="ort_name" name="ort_name"
+                 value="{{ v.ort_name|default('') }}"
+                 placeholder="z.B. Haupthalle, Vortragssaal, Freigelände">
+        </div>
+
+        <div class="form-group span-2">
+          <label>Titel <span class="req">*</span></label>
+          <div id="quill-titel" style="min-height:60px"></div>
+          <input type="hidden" name="titel" id="titel-input" value="{{ v.titel|default('') }}">
+        </div>
+
+        <div class="form-group span-2">
+          <label>Beschreibung <span style="color:var(--text-muted);font-weight:400">(optional)</span></label>
+          <div id="quill-beschreibung"></div>
+          <input type="hidden" name="beschreibung" id="beschreibung-input" value="{{ v.beschreibung|default('') }}">
+        </div>
+
+      </div>
+
+      {% if event_participants %}
+        <div class="form-section">
+          <div class="form-section-title">Mitwirkende <span style="font-weight:400;color:var(--text-muted)">(optional)</span></div>
+          <div style="display:flex;flex-wrap:wrap;gap:.5rem .125rem;margin-top:.25rem">
+            {% for p in event_participants %}
+              <label style="display:inline-flex;align-items:center;gap:.5rem;padding:.375rem .75rem;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:.875rem;transition:border-color .15s"
+                     onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
+                <input type="checkbox" name="teilnehmer[]" value="{{ p.id }}"
+                       {{ p.id in assigned_ids ? 'checked' : '' }}
+                       style="accent-color:var(--primary)">
+                {{ p.name }}
+                <span style="font-size:.75rem;color:var(--text-muted)">{{ p.typ == 'kuenstler' ? 'K' : 'G' }}</span>
+              </label>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+  <div class="form-actions" style="max-width:860px">
+    <button type="submit" class="btn btn-primary">
+      {{ is_edit ? 'Speichern' : 'Hinzufügen' }}
+    </button>
+    <a href="{{ back_url }}" class="btn btn-secondary">Abbrechen</a>
+  </div>
+
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script src="/assets/quill/quill.min.js"></script>
+<script>
+const titelToolbar = [['bold', 'italic', 'underline'], ['clean']];
+const descToolbar  = [[{ header: [2, 3, false] }], ['bold', 'italic', 'underline'],
+                      [{ list: 'ordered' }, { list: 'bullet' }], ['link'], ['clean']];
+
+const quillTitel = new Quill('#quill-titel', {
+  theme: 'snow', placeholder: 'Titel …', modules: { toolbar: titelToolbar }
+});
+const quillDesc  = new Quill('#quill-beschreibung', {
+  theme: 'snow', placeholder: 'Kurzbeschreibung …', modules: { toolbar: descToolbar }
+});
+
+const existingTitel = {{ v.titel|default('')|json_encode|raw }};
+const existingDesc  = {{ v.beschreibung|default('')|json_encode|raw }};
+if (existingTitel) quillTitel.clipboard.dangerouslyPasteHTML(existingTitel);
+if (existingDesc)  quillDesc.clipboard.dangerouslyPasteHTML(existingDesc);
+
+document.getElementById('main-form').addEventListener('submit', () => {
+  const t = quillTitel.root.innerHTML;
+  const d = quillDesc.root.innerHTML;
+  document.getElementById('titel-input').value        = (t === '<p><br></p>' || t === '') ? '' : t;
+  document.getElementById('beschreibung-input').value = (d === '<p><br></p>' || d === '') ? '' : d;
+});
+</script>
+{% endblock %}

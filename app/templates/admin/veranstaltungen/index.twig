@@ -1,0 +1,115 @@
+{% extends 'base.twig' %}
+
+{% block content %}
+{% if flash %}
+  <div class="alert alert-{{ flash.type }}">{{ flash.msg }}</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">
+      Alle Veranstaltungen
+      <span style="color:var(--text-muted);font-weight:400;font-size:.875rem">&nbsp;{{ total }}</span>
+    </span>
+    <div style="display:flex;gap:.5rem;align-items:center">
+      <form method="get" class="search-form">
+        <input type="search" name="q" value="{{ q }}"
+               placeholder="Suchen …" class="search-input" autocomplete="off">
+        {% if q %}
+          <a href="?" class="search-clear" title="Suche zurücksetzen">✕</a>
+        {% endif %}
+      </form>
+      <a href="/admin/veranstaltungen/form.php" class="btn btn-primary btn-sm">
+        <i class="fa-solid fa-plus"></i>
+        Neue Veranstaltung
+      </a>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Ort</th>
+          <th>Zeitraum</th>
+          <th style="text-align:center">Tage</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if not rows %}
+          <tr>
+            <td colspan="6" style="text-align:center;color:var(--text-muted);padding:2.5rem 1rem">
+              {{ q ? 'Keine Ergebnisse für «' ~ q ~ '».' : 'Noch keine Veranstaltungen vorhanden.' }}
+            </td>
+          </tr>
+        {% endif %}
+        {% for v in rows %}
+          {% set ortzeile = ((v.plz ?? '') ~ ' ' ~ (v.ort ?? ''))|trim %}
+          <tr>
+            <td class="cell-name">
+              {{ v.name }}
+              {% if not v.sichtbar %}
+                <span class="badge badge-draft" style="margin-left:.375rem">Entwurf</span>
+              {% endif %}
+            </td>
+            <td class="cell-muted">
+              {% if v.ort_name %}
+                {{ v.ort_name }}
+                {% if ortzeile %}<br><span style="font-size:.75rem">{{ ortzeile }}</span>{% endif %}
+              {% elseif ortzeile %}
+                {{ ortzeile }}
+              {% else %}
+                –
+              {% endif %}
+            </td>
+            <td>
+              {% if v.erster_tag %}
+                {{ fmt(v.erster_tag) }}
+                {% if v.erster_tag != v.letzter_tag %}
+                  <span style="color:var(--text-muted)">–</span>
+                  {{ fmt(v.letzter_tag) }}
+                {% endif %}
+              {% else %}
+                <span class="cell-muted">–</span>
+              {% endif %}
+            </td>
+            <td style="text-align:center;color:var(--text-muted)">{{ v.tag_anzahl }}</td>
+            <td>
+              {% if v.erster_tag %}
+                {% if v.letzter_tag < today %}
+                  <span class="badge badge-past">Vergangen</span>
+                {% elseif v.erster_tag > today %}
+                  <span class="badge badge-future">Demnächst</span>
+                {% else %}
+                  <span class="badge badge-live">Läuft jetzt</span>
+                {% endif %}
+              {% else %}
+                <span class="cell-muted">–</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="actions">
+                <a href="/admin/veranstaltungen/form.php?id={{ v.id }}"
+                   class="btn btn-secondary btn-sm">Bearbeiten</a>
+                <a href="/admin/veranstaltungen/form.php?copy={{ v.id }}"
+                   class="btn btn-ghost btn-sm">
+                  <i class="fa-regular fa-copy"></i>Kopieren</a>
+                <a href="/admin/veranstaltungen/delete.php?id={{ v.id }}"
+                   class="btn btn-ghost btn-sm" style="color:var(--danger)">Löschen</a>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% include 'partials/pagination.twig' with {
+    page: page, pages: pages, total: total, offset: offset, per_page: per_page,
+    pagination_base: q ? '?q=' ~ q|url_encode : ''
+  } %}
+</div>
+{% endblock %}

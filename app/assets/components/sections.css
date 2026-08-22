@@ -1,0 +1,25 @@
+.section {
+  padding-bottom: 2rem;
+}
+
+.section-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 0.75rem;
+}
+
+.section-title {
+  font-family: var(--font);
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+  font-weight: normal;
+  color: var(--black);
+  margin-bottom: 1.5rem;
+}
+
+.section-body {
+  color: var(--mid);
+  line-height: 1.7;
+  max-width: var(--max-w-text);
+}

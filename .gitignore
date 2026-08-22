@@ -1,0 +1,21 @@
+# Umgebung & Secrets
+.env
+
+# Abhängigkeiten
+node_modules/
+app/vendor/
+
+# Datenbankdaten
+mysql/data/
+
+# Bild-Ordner (groß, nicht versioniert)
+images_full/
+titelbilder/
+parsed/images/
+
+# Uploads (user-generiert, persistent über Docker-Volume)
+uploads/
+app/uploads/
+
+# Messdaten / externe Daten
+messen/

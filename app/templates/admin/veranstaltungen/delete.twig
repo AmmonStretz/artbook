@@ -1,0 +1,29 @@
+{% extends 'base.twig' %}
+
+{% block content %}
+<div class="delete-card">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Veranstaltung löschen</span>
+      <a href="/admin/veranstaltungen/" class="btn btn-ghost btn-sm">← Zurück</a>
+    </div>
+    <div class="card-body">
+      <div class="delete-warning">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <p>
+          <strong>{{ name }}</strong>
+          Alle Tage, Bereiche, Tische und Teilnahmen dieser Veranstaltung werden
+          unwiderruflich gelöscht.
+        </p>
+      </div>
+      <form method="post">
+        <input type="hidden" name="confirm" value="yes">
+        <div style="display:flex;gap:.625rem">
+          <button type="submit" class="btn btn-danger">Endgültig löschen</button>
+          <a href="/admin/veranstaltungen/" class="btn btn-secondary">Abbrechen</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

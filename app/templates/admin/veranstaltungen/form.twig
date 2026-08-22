@@ -1,0 +1,1513 @@
+{% extends 'base.twig' %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="/assets/flatpickr/flatpickr.min.css">
+<link rel="stylesheet" href="/assets/tiptap/tiptap.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+{% endblock %}
+
+{% block content %}
+{% if is_copy %}
+  <div class="alert alert-info" style="max-width:860px;background:#f0f9ff;border-color:#bae6fd;color:#0c4a6e">
+    Kopie von: <strong>{{ fetched_name }}</strong> — Bitte Daten prüfen und anpassen.
+  </div>
+{% endif %}
+
+{% if errors %}
+  <div class="alert alert-error" style="max-width:860px">
+    {% for e in errors %}<div>{{ e }}</div>{% endfor %}
+  </div>
+{% endif %}
+
+<form method="post" id="main-form" style="max-width:860px" novalidate>
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">{{ page_title }}</span>
+      <a href="/admin/veranstaltungen/" class="btn btn-ghost btn-sm">← Zurück zur Liste</a>
+    </div>
+    <div class="card-body">
+
+      <div class="lang-tabs" style="margin-bottom:.25rem">
+        <button type="button" class="lang-tab active" onclick="switchFormLang(this,'de')">DE</button>
+        <button type="button" class="lang-tab" onclick="switchFormLang(this,'en')">EN</button>
+      </div>
+
+      <div class="lang-panel" id="form-panel-de">
+        <div class="form-grid">
+          <div class="form-group span-2">
+            <label for="name">Name <span class="req">*</span></label>
+            <input type="text" id="name" name="name" value="{{ v.name }}" required autofocus>
+          </div>
+          <div class="form-group span-2">
+            <label>Kurzbeschreibung</label>
+            <div id="quill-editor-kurz"></div>
+            <input type="hidden" name="kurzbeschreibung" id="kurzbeschreibung-input"
+                   value="{{ v.kurzbeschreibung|default('') }}">
+          </div>
+          <div class="form-group span-2">
+            <label>Beschreibung</label>
+            <div id="quill-editor"></div>
+            <input type="hidden" name="beschreibung" id="beschreibung-input"
+                   value="{{ v.beschreibung|default('') }}">
+          </div>
+        </div>
+      </div>
+
+      <div class="lang-panel" id="form-panel-en" style="display:none">
+        <div class="form-grid">
+          <div class="form-group span-2">
+            <label for="name_en">Name <span style="color:var(--text-muted);font-weight:400">(EN, optional)</span></label>
+            <input type="text" id="name_en" name="name_en" value="{{ v.name_en|default('') }}">
+          </div>
+          <div class="form-group span-2">
+            <label>Kurzbeschreibung <span style="color:var(--text-muted);font-weight:400">(EN, optional)</span></label>
+            <div id="quill-editor-kurz-en"></div>
+            <input type="hidden" name="kurzbeschreibung_en" id="kurzbeschreibung-en-input"
+                   value="{{ v.kurzbeschreibung_en|default('') }}">
+          </div>
+          <div class="form-group span-2">
+            <label>Beschreibung <span style="color:var(--text-muted);font-weight:400">(EN, optional)</span></label>
+            <div id="quill-editor-en"></div>
+            <input type="hidden" name="beschreibung_en" id="beschreibung-en-input"
+                   value="{{ v.beschreibung_en|default('') }}">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-grid">
+
+        <div class="form-group span-2">
+          <label class="checkbox-label">
+            <input type="checkbox" name="sichtbar" value="1" {{ v.sichtbar ? 'checked' : '' }}>
+            <span>Veranstaltung anzeigen (veröffentlicht)</span>
+          </label>
+        </div>
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" name="programm_sichtbar" value="1" {{ v.programm_sichtbar ? 'checked' : '' }}>
+            <span>Programm anzeigen</span>
+          </label>
+        </div>
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" name="teilnehmer_sichtbar" value="1" {{ v.teilnehmer_sichtbar ? 'checked' : '' }}>
+            <span>Teilnehmer anzeigen</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Adresse & Veranstaltungsort</div>
+        <div class="form-grid">
+          <div class="form-group span-2">
+            <label for="strasse">Straße & Hausnummer</label>
+            <input type="text" id="strasse" name="strasse" value="{{ v.strasse|default('') }}">
+          </div>
+          <div class="form-group">
+            <label for="plz">PLZ</label>
+            <input type="text" id="plz" name="plz" value="{{ v.plz|default('') }}">
+          </div>
+          <div class="form-group">
+            <label for="ort">Ort</label>
+            <input type="text" id="ort" name="ort" value="{{ v.ort|default('') }}">
+          </div>
+          <div class="form-group">
+            <label for="ort_name">Name des Veranstaltungsorts</label>
+            <input type="text" id="ort_name" name="ort_name"
+                   value="{{ v.ort_name|default('') }}"
+                   placeholder="z.B. Messe Frankfurt, Halle 3">
+          </div>
+          <div class="form-group">
+            <label for="ort_url">Link zum Ort <span style="color:var(--text-muted);font-weight:400">(optional)</span></label>
+            <input type="text" id="ort_url" name="ort_url"
+                   value="{{ v.ort_url|default('') }}" placeholder="https://…">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Koordinaten</div>
+        <div class="map-wrap" style="margin-bottom:.75rem">
+          <div id="map"></div>
+        </div>
+        <p class="map-hint">
+          <i class="fa-solid fa-circle-info"></i>
+          Auf die Karte klicken, um einen Marker zu setzen – oder Koordinaten direkt eingeben.
+        </p>
+        <div class="form-grid" style="margin-top:.75rem">
+          <div class="form-group">
+            <label for="lat">Breitengrad</label>
+            <input type="number" id="lat" name="lat" step="any" min="-90" max="90"
+                   value="{{ v.lat|default('') }}" placeholder="z.B. 50.1109">
+          </div>
+          <div class="form-group">
+            <label for="lng">Längengrad</label>
+            <input type="number" id="lng" name="lng" step="any" min="-180" max="180"
+                   value="{{ v.lng|default('') }}" placeholder="z.B. 8.6821">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Veranstaltungstage & Programm <span class="req">*</span></div>
+
+        <div id="tage-container" class="tag-tiles">
+          {% for t in tage %}
+            {% set datum      = t.datum|default('') %}
+            {% set prog_items = prog_by_date[datum]|default([]) %}
+            {% set show_prog  = is_edit and datum != '' %}
+            <div class="tag-tile">
+              <div class="tag-tile-fields{{ not show_prog ? ' no-prog' : '' }}">
+                <div>
+                  <label class="tag-field-label">Datum <span class="req">*</span></label>
+                  <input class="fp-date" type="text" name="tag_datum[]" value="{{ datum }}">
+                </div>
+                <div>
+                  <label class="tag-field-label">Von <span class="req">*</span></label>
+                  <input class="fp-time" type="text" name="tag_startzeit[]"
+                         value="{{ t.startzeit|default('')|slice(0, 5) }}">
+                </div>
+                <div>
+                  <label class="tag-field-label">Bis <span class="req">*</span></label>
+                  <input class="fp-time" type="text" name="tag_endzeit[]"
+                         value="{{ t.endzeit|default('')|slice(0, 5) }}">
+                </div>
+                <button type="button" class="btn btn-ghost btn-icon remove-tag" title="Tag entfernen">
+                  <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                </button>
+              </div>
+              {% if show_prog %}
+                <div class="tag-tile-prog" data-datum="{{ datum }}">
+                  {% for e in prog_items %}
+                    <div class="tag-tile-prog-item">
+                      <div class="tag-tile-prog-time">{{ e.uhrzeit|slice(0, 5) }}</div>
+                      <div class="tag-tile-prog-body">
+                        <div class="tag-tile-prog-title">{{ e.titel|striptags }}</div>
+                        {% if e.ort_name %}
+                          <div class="tag-tile-prog-loc">{{ e.ort_name }}</div>
+                        {% endif %}
+                      </div>
+                      <div class="tag-tile-prog-actions">
+                        <button type="button" class="btn btn-ghost btn-sm"
+                                onclick="openProgDialog({{ e.id }}, '{{ datum }}')">Bearbeiten</button>
+                        <button type="button" class="btn btn-ghost btn-sm" style="color:var(--danger)"
+                                onclick="deleteProgEntry({{ e.id }}, '{{ datum }}')">Löschen</button>
+                      </div>
+                    </div>
+                  {% else %}
+                    <div class="tag-tile-empty">Noch keine Programmpunkte für diesen Tag.</div>
+                  {% endfor %}
+                  <a href="#" class="tag-tile-add"
+                     onclick="openProgDialog(null, '{{ datum }}'); return false;">
+                    <i class="fa-solid fa-plus"></i>
+                    Programmpunkt hinzufügen
+                  </a>
+                </div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+
+        <button type="button" id="add-tag" class="btn btn-secondary btn-sm" style="margin-top:.5rem">
+          <i class="fa-solid fa-plus"></i>
+          Tag hinzufügen
+        </button>
+      </div>
+
+      <div id="form-flash" hidden style="margin-bottom:.75rem"></div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" id="form-submit-btn">
+          {{ is_edit ? 'Änderungen speichern' : (is_copy ? 'Kopie erstellen' : 'Veranstaltung erstellen') }}
+        </button>
+        <a href="/admin/veranstaltungen/" class="btn btn-secondary">Abbrechen</a>
+      </div>
+
+    </div>
+  </div>
+</form>
+
+{% if is_edit %}
+<div style="max-width:860px;margin-top:1.25rem">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Teilnehmer</span>
+      <span id="tn-count" style="color:var(--text-muted);font-size:.8125rem;font-weight:400">–</span>
+    </div>
+    <div style="padding:.75rem 1.25rem;border-bottom:1px solid var(--border)">
+      <input type="search" id="tn-list-q" placeholder="Suchen …" class="search-input"
+             style="width:100%;max-width:320px" autocomplete="off">
+    </div>
+    <div style="padding:0">
+      <div id="tn-list-wrap"><p class="member-empty" style="padding:1rem 1.25rem">Laden …</p></div>
+      <div id="tn-list-pagination"></div>
+      <div class="member-add-wrap">
+        <button type="button" class="btn btn-primary btn-sm" id="tn-open-dialog">
+          <i class="fa-solid fa-plus"></i>
+          Vorhandenen hinzufügen
+        </button>
+        <button type="button" class="btn btn-secondary btn-sm" id="tn-create-open">
+          <i class="fa-solid fa-user-plus"></i>
+          Neu erstellen
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="max-width:860px;margin-top:1.25rem">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Titelbild</span>
+      <label class="btn btn-primary btn-sm" style="cursor:pointer">
+        <i class="fa-solid fa-upload"></i>
+        {{ v.titelbild|default('') ? 'Ersetzen' : 'Hochladen' }}
+        <input type="file" id="titelbild-input" accept=".jpg,.jpeg,.png,.webp" hidden>
+      </label>
+    </div>
+    <div class="card-body">
+      <p class="bild-hint">
+        Genau {{ IMG_TITELBILD_HEIGHT }} px Höhe, mindestens {{ IMG_TITELBILD_MIN_WIDTH }} px Breite &nbsp;·&nbsp;
+        wird auf 1920×540, 1024×540 und 768×405 zugeschnitten &nbsp;·&nbsp;
+        JPEG, PNG, WebP
+      </p>
+      <div id="titelbild-error"></div>
+      <div id="titelbild-wrap">
+        {% if v.titelbild|default('') %}
+          {% set tb_stem = v.titelbild|split('.')|first %}
+          <div class="titelbild-preview">
+            <img src="{{ IMG_UPLOAD_URL ~ tb_stem ~ '_1024.jpg' }}"
+                 alt="Titelbild" class="titelbild-img"
+                 onclick="titelbildPreview('{{ (IMG_UPLOAD_URL ~ v.titelbild)|escape('js') }}')">
+            <button type="button" class="btn btn-ghost btn-sm"
+                    style="color:var(--danger);margin-top:.625rem"
+                    onclick="titelbildDelete()">Titelbild entfernen</button>
+          </div>
+        {% else %}
+          <p class="bild-empty">Kein Titelbild hochgeladen.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<dialog id="titelbild-preview-dialog" class="bild-preview-dialog">
+  <div class="bild-preview-header">
+    <span style="color:#e2e8f0;font-size:.8125rem">{{ v.name }}</span>
+    <button type="button" class="btn btn-ghost btn-sm" style="color:#e2e8f0"
+            onclick="document.getElementById('titelbild-preview-dialog').close()">✕</button>
+  </div>
+  <img id="titelbild-preview-img" src="" alt=""
+       style="display:block;max-width:88vw;max-height:80vh;object-fit:contain">
+</dialog>
+
+<dialog id="tn-dialog" class="tn-dialog">
+  <div class="tn-dialog-header">
+    <span class="tn-dialog-title">Teilnehmer hinzufügen</span>
+    <button type="button" id="tn-close" class="btn btn-ghost btn-sm">✕</button>
+  </div>
+  <div class="tn-dialog-toolbar">
+    <input type="search" id="tn-q" placeholder="Suchen …" class="search-input"
+           style="flex:1;width:auto" autocomplete="off">
+    <select id="tn-typ" style="width:auto">
+      <option value="">Alle</option>
+      <option value="kuenstler">Künstler</option>
+      <option value="gruppe">Gruppen</option>
+    </select>
+  </div>
+  <div id="tn-body" class="tn-dialog-body"></div>
+  <div id="tn-footer" class="tn-dialog-footer"></div>
+</dialog>
+
+<dialog id="tn-create-dialog" class="tn-dialog">
+  <div class="tn-dialog-header">
+    <span class="tn-dialog-title">Neuen Teilnehmer erstellen</span>
+    <button type="button" id="tn-create-close" class="btn btn-ghost btn-sm">✕</button>
+  </div>
+  <div class="tn-dialog-body" style="padding:1.25rem;overflow-y:auto">
+    <div id="tn-create-error" class="alert alert-error" style="margin-bottom:1rem;display:none"></div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="tn-create-typ">Typ <span class="req">*</span></label>
+        <select id="tn-create-typ">
+          <option value="kuenstler">Künstler</option>
+          <option value="gruppe">Gruppe</option>
+        </select>
+      </div>
+      <div class="form-group" id="tn-create-gruppe-typ-wrap" style="display:none">
+        <label for="tn-create-gruppe-typ">Gruppentyp <span class="req">*</span></label>
+        <select id="tn-create-gruppe-typ">
+          {% for key, label in GRUPPE_TYPEN %}
+            <option value="{{ key }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group span-2">
+        <label for="tn-create-name">Name <span class="req">*</span></label>
+        <input type="text" id="tn-create-name" placeholder="Name …" autocomplete="off">
+      </div>
+      <div class="form-group span-2">
+        <label for="tn-create-tischnr" style="font-weight:400;color:var(--text-muted)">
+          Tischnummer <span style="font-size:.8125rem">(optional)</span>
+        </label>
+        <input type="text" id="tn-create-tischnr" placeholder="z.B. 12" autocomplete="off"
+               style="max-width:120px">
+      </div>
+      <div class="form-group span-2">
+        <label class="checkbox-label">
+          <input type="checkbox" id="tn-create-add-to-event" checked>
+          <span>Direkt zur Veranstaltung hinzufügen</span>
+        </label>
+      </div>
+    </div>
+  </div>
+  <div class="tn-dialog-footer" style="justify-content:flex-end;gap:.5rem">
+    <button type="button" class="btn btn-secondary" id="tn-create-cancel">Abbrechen</button>
+    <button type="button" class="btn btn-primary" id="tn-create-submit">Erstellen</button>
+  </div>
+</dialog>
+
+<dialog id="tn-edit-dialog" class="tn-dialog">
+  <div class="tn-dialog-header">
+    <span class="tn-dialog-title" id="tn-edit-title">Teilnehmer bearbeiten</span>
+    <button type="button" id="tn-edit-close" class="btn btn-ghost btn-sm">✕</button>
+  </div>
+  <div class="tn-dialog-body" style="padding:1.25rem;overflow-y:auto">
+    <div id="tn-edit-error" class="alert alert-error" style="display:none;margin-bottom:1rem"></div>
+    <input type="hidden" id="tn-edit-id">
+    <div class="form-grid">
+      <div class="form-group span-2">
+        <label>Name <span class="req">*</span></label>
+        <input type="text" id="tn-edit-name" autocomplete="off">
+      </div>
+      <div class="form-group span-2" id="tn-edit-gruppe-typ-wrap" style="display:none">
+        <label>Gruppentyp <span class="req">*</span></label>
+        <select id="tn-edit-gruppe-typ">
+          {% for key, label in GRUPPE_TYPEN %}
+            <option value="{{ key }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group span-2">
+        <label style="font-weight:400;color:var(--text-muted)">Link <span style="font-size:.8125rem">(optional)</span></label>
+        <input type="text" id="tn-edit-link" placeholder="https://…" autocomplete="off">
+      </div>
+      <div class="form-group span-2">
+        <label style="font-weight:400;color:var(--text-muted)">Beschreibung <span style="font-size:.8125rem">(optional)</span></label>
+        <div class="lang-tabs">
+          <button type="button" class="lang-tab active" onclick="switchTnEditLang(this,'de')">DE</button>
+          <button type="button" class="lang-tab" onclick="switchTnEditLang(this,'en')">EN</button>
+        </div>
+        <div class="lang-panel" id="tn-edit-panel-de">
+          <div id="tn-edit-quill"></div>
+        </div>
+        <div class="lang-panel" id="tn-edit-panel-en" style="display:none">
+          <div id="tn-edit-quill-en"></div>
+        </div>
+      </div>
+    </div>
+    <div id="tn-edit-gruppe-members" style="display:none;margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">
+        <span style="font-size:.875rem;font-weight:600">Künstler</span>
+        <button type="button" class="btn btn-secondary btn-sm" id="tn-edit-add-kuenstler">
+          <i class="fa-solid fa-plus"></i> Hinzufügen
+        </button>
+      </div>
+      <div id="tn-edit-mitglieder-list"></div>
+      <div id="tn-edit-mitglieder-pag"></div>
+    </div>
+  </div>
+  <div class="tn-dialog-footer" style="justify-content:flex-end;gap:.5rem">
+    <button type="button" class="btn btn-secondary" id="tn-edit-cancel">Abbrechen</button>
+    <button type="button" class="btn btn-primary" id="tn-edit-submit">Speichern</button>
+  </div>
+</dialog>
+
+<dialog id="gruppe-k-dialog" class="tn-dialog">
+  <div class="tn-dialog-header">
+    <span class="tn-dialog-title">Künstler hinzufügen</span>
+    <button type="button" id="gk-close" class="btn btn-ghost btn-sm">✕</button>
+  </div>
+  <div class="tn-dialog-toolbar">
+    <input type="search" id="gk-q" placeholder="Suchen …" class="search-input"
+           style="flex:1;width:auto" autocomplete="off">
+  </div>
+  <div id="gk-body" class="tn-dialog-body"></div>
+  <div id="gk-footer" class="tn-dialog-footer"></div>
+</dialog>
+
+<dialog id="prog-dialog" class="tn-dialog" style="width:680px">
+  <div class="tn-dialog-header">
+    <span class="tn-dialog-title" id="prog-dialog-title">Programmpunkt</span>
+    <button type="button" id="prog-dialog-close" class="btn btn-ghost btn-sm">✕</button>
+  </div>
+  <div class="tn-dialog-body" style="padding:1.25rem;overflow-y:auto">
+    <div id="prog-dialog-error" class="alert alert-error" style="display:none;margin-bottom:1rem"></div>
+    <input type="hidden" id="prog-id">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Tag <span class="req">*</span></label>
+        <select id="prog-datum"></select>
+      </div>
+      <div class="form-group">
+        <label>Uhrzeit <span class="req">*</span></label>
+        <input type="time" id="prog-uhrzeit">
+      </div>
+      <div class="form-group span-2">
+        <div class="lang-tabs">
+          <button type="button" class="lang-tab active" onclick="switchProgLang(this,'de')">DE</button>
+          <button type="button" class="lang-tab" onclick="switchProgLang(this,'en')">EN</button>
+        </div>
+        <div class="lang-panel" id="prog-panel-de">
+          <label style="font-weight:400;color:var(--text-muted)">Ort <span style="font-size:.8125rem">(optional)</span></label>
+          <input type="text" id="prog-ort-name" placeholder="z.B. Haupthalle" autocomplete="off" style="margin-bottom:.75rem">
+          <label>Titel <span class="req">*</span></label>
+          <div id="prog-quill-titel" style="min-height:32px"></div>
+          <label style="font-weight:400;color:var(--text-muted);margin-top:.75rem;display:block">Beschreibung <span style="font-size:.8125rem">(optional)</span></label>
+          <div id="prog-quill-beschr"></div>
+        </div>
+        <div class="lang-panel" id="prog-panel-en" style="display:none">
+          <label style="font-weight:400;color:var(--text-muted)">Venue <span style="font-size:.8125rem">(EN, optional)</span></label>
+          <input type="text" id="prog-ort-name-en" placeholder="e.g. Main Hall" autocomplete="off" style="margin-bottom:.75rem">
+          <label>Title <span style="color:var(--text-muted);font-weight:400">(EN, optional)</span></label>
+          <div id="prog-quill-titel-en" style="min-height:32px"></div>
+          <label style="font-weight:400;color:var(--text-muted);margin-top:.75rem;display:block">Description <span style="font-size:.8125rem">(optional)</span></label>
+          <div id="prog-quill-beschr-en"></div>
+        </div>
+      </div>
+      <div class="form-group span-2" id="prog-tn-section" style="display:none">
+        <label style="font-weight:400;color:var(--text-muted)">Mitwirkende <span style="font-size:.8125rem">(optional)</span></label>
+        <div id="prog-tn-chips" style="display:flex;flex-wrap:wrap;gap:.375rem;margin-bottom:.5rem"></div>
+        <div style="position:relative">
+          <input type="search" id="prog-tn-search" placeholder="Mitwirkende suchen …" autocomplete="off" style="width:100%">
+          <div id="prog-tn-dropdown" style="display:none;position:absolute;left:0;right:0;top:100%;z-index:30;background:#fff;border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;max-height:180px;overflow-y:auto;box-shadow:0 4px 8px rgba(0,0,0,.08)"></div>
+        </div>
+        <div style="margin-top:.625rem;display:flex;gap:.5rem">
+          <a href="/admin/kuenstler/form.php" target="_blank" class="btn btn-ghost btn-sm">
+            <i class="fa-solid fa-plus" aria-hidden="true"></i> Neuer Künstler
+          </a>
+          <a href="/admin/gruppen/form.php" target="_blank" class="btn btn-ghost btn-sm">
+            <i class="fa-solid fa-plus" aria-hidden="true"></i> Neue Gruppe
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="tn-dialog-footer" style="justify-content:flex-end;gap:.5rem">
+    <button type="button" class="btn btn-secondary" id="prog-dialog-cancel">Abbrechen</button>
+    <button type="button" class="btn btn-primary" id="prog-dialog-submit">Speichern</button>
+  </div>
+</dialog>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="/assets/flatpickr/flatpickr.min.js"></script>
+<script src="/assets/flatpickr/l10n/de.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script type="module">
+import { mkEditor, edHTML } from '/assets/tiptap/init.js';
+
+const edKurz   = mkEditor(document.getElementById('quill-editor-kurz'),    { placeholder: 'Kurze Beschreibung für Vorschau und Übersichten …', initialHTML: {{ v.kurzbeschreibung|default('')|json_encode|raw }} });
+const edKurzEN = mkEditor(document.getElementById('quill-editor-kurz-en'), { placeholder: 'Short description for preview …',                  initialHTML: {{ v.kurzbeschreibung_en|default('')|json_encode|raw }} });
+const edMain   = mkEditor(document.getElementById('quill-editor'),          { placeholder: 'Beschreibung eingeben …',                          initialHTML: {{ v.beschreibung|default('')|json_encode|raw }} });
+const edMainEN = mkEditor(document.getElementById('quill-editor-en'),       { placeholder: 'Description …',                                    initialHTML: {{ v.beschreibung_en|default('')|json_encode|raw }} });
+
+window._tt = {
+  edKurz, edKurzEN, edMain, edMainEN, edHTML,
+  progTitel: null, progTitelEN: null, progBeschr: null, progBeschrEN: null,
+  tnEdit: null, tnEditEN: null,
+  ensureProgEditors() {
+    if (this.progTitel) return;
+    this.progTitel   = mkEditor(document.getElementById('prog-quill-titel'),    { placeholder: 'Titel …',        small: true });
+    this.progTitelEN = mkEditor(document.getElementById('prog-quill-titel-en'), { placeholder: 'Title …',        small: true });
+    this.progBeschr  = mkEditor(document.getElementById('prog-quill-beschr'),   { placeholder: 'Beschreibung …'             });
+    this.progBeschrEN = mkEditor(document.getElementById('prog-quill-beschr-en'), { placeholder: 'Description …'            });
+  },
+  ensureTnEditEditor() {
+    if (this.tnEdit) return;
+    this.tnEdit   = mkEditor(document.getElementById('tn-edit-quill'),    { placeholder: 'Beschreibung …' });
+    this.tnEditEN = mkEditor(document.getElementById('tn-edit-quill-en'), { placeholder: 'Description …'  });
+  },
+};
+</script>
+
+<script>
+const dateCfg = {
+  locale: 'de', dateFormat: 'Y-m-d', altInput: true, altFormat: 'd.m.Y', allowInput: true,
+};
+const timeCfg = {
+  locale: 'de', enableTime: true, noCalendar: true, time_24hr: true, dateFormat: 'H:i', allowInput: true,
+};
+
+function initFlatpickrRow(tile) {
+  tile.querySelectorAll('.fp-date').forEach(el => flatpickr(el, dateCfg));
+  tile.querySelectorAll('.fp-time').forEach(el => flatpickr(el, timeCfg));
+}
+document.querySelectorAll('#tage-container .tag-tile').forEach(initFlatpickrRow);
+
+const container = document.getElementById('tage-container');
+
+function syncRemoveButtons() {
+  const tiles = container.querySelectorAll('.tag-tile');
+  tiles.forEach(t => { t.querySelector('.remove-tag').disabled = tiles.length === 1; });
+}
+
+const REMOVE_ICON = `<i class="fa-solid fa-trash" aria-hidden="true"></i>`;
+
+document.getElementById('add-tag').addEventListener('click', () => {
+  const tile = document.createElement('div');
+  tile.className = 'tag-tile';
+  tile.innerHTML = `
+    <div class="tag-tile-fields no-prog">
+      <div>
+        <label class="tag-field-label">Datum <span class="req">*</span></label>
+        <input class="fp-date" type="text" name="tag_datum[]">
+      </div>
+      <div>
+        <label class="tag-field-label">Von <span class="req">*</span></label>
+        <input class="fp-time" type="text" name="tag_startzeit[]">
+      </div>
+      <div>
+        <label class="tag-field-label">Bis <span class="req">*</span></label>
+        <input class="fp-time" type="text" name="tag_endzeit[]">
+      </div>
+      <button type="button" class="btn btn-ghost btn-icon remove-tag" title="Tag entfernen">${REMOVE_ICON}</button>
+    </div>`;
+  container.appendChild(tile);
+  initFlatpickrRow(tile);
+  tile.querySelector('.fp-date').focus();
+  syncRemoveButtons();
+});
+
+container.addEventListener('click', e => {
+  if (e.target.closest('.remove-tag')) {
+    e.target.closest('.tag-tile').remove();
+    syncRemoveButtons();
+  }
+});
+
+syncRemoveButtons();
+
+function syncQuillContent() {
+  const tt = window._tt;
+  document.getElementById('kurzbeschreibung-input').value    = tt.edHTML(tt.edKurz);
+  document.getElementById('kurzbeschreibung-en-input').value = tt.edHTML(tt.edKurzEN);
+  document.getElementById('beschreibung-input').value        = tt.edHTML(tt.edMain);
+  document.getElementById('beschreibung-en-input').value     = tt.edHTML(tt.edMainEN);
+}
+
+function switchFormLang(btn, lang) {
+  btn.closest('.lang-tabs').querySelectorAll('.lang-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('form-panel-de').style.display = lang === 'de' ? '' : 'none';
+  document.getElementById('form-panel-en').style.display = lang === 'en' ? '' : 'none';
+}
+
+function showFormFlash(type, msg) {
+  const el = document.getElementById('form-flash');
+  el.className = 'alert alert-' + type;
+  el.textContent = msg;
+  el.hidden = false;
+  clearTimeout(el._t);
+  if (type === 'success') el._t = setTimeout(() => { el.hidden = true; }, 3500);
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+document.getElementById('main-form').addEventListener('submit', async (e) => {
+  syncQuillContent();
+  {% if not is_edit %}
+  return;
+  {% endif %}
+  e.preventDefault();
+  const btn = document.getElementById('form-submit-btn');
+  const origText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Speichern …';
+  const fd = new FormData(e.target);
+  fd.append('_ajax', '1');
+  try {
+    const r    = await fetch('', { method: 'POST', body: fd });
+    const data = await r.json();
+    if (data.ok) {
+      showFormFlash('success', data.msg);
+    } else {
+      showFormFlash('error', data.errors.join(' '));
+    }
+  } catch {
+    showFormFlash('error', 'Fehler beim Speichern.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = origText;
+  }
+});
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconUrl:       'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+});
+
+const initLat = parseFloat(document.getElementById('lat').value);
+const initLng = parseFloat(document.getElementById('lng').value);
+const hasCoords = !isNaN(initLat) && !isNaN(initLng);
+
+const map = L.map('map').setView(
+  hasCoords ? [initLat, initLng] : [51.1657, 10.4515],
+  hasCoords ? 14 : 6
+);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  maxZoom: 19
+}).addTo(map);
+
+let marker = hasCoords ? L.marker([initLat, initLng]).addTo(map) : null;
+
+function placeMarker(lat, lng) {
+  const pos = [+lat.toFixed(6), +lng.toFixed(6)];
+  marker ? marker.setLatLng(pos) : (marker = L.marker(pos).addTo(map));
+  document.getElementById('lat').value = pos[0];
+  document.getElementById('lng').value = pos[1];
+}
+
+map.on('click', e => placeMarker(e.latlng.lat, e.latlng.lng));
+
+function syncMapFromInputs() {
+  const lat = parseFloat(document.getElementById('lat').value);
+  const lng = parseFloat(document.getElementById('lng').value);
+  if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+    placeMarker(lat, lng);
+    map.setView([lat, lng], map.getZoom() < 10 ? 14 : map.getZoom());
+  }
+}
+
+document.getElementById('lat').addEventListener('change', syncMapFromInputs);
+document.getElementById('lng').addEventListener('change', syncMapFromInputs);
+</script>
+
+{% if is_edit %}
+<script>
+const tnVid        = {{ id }};
+const tnDialog     = document.getElementById('tn-dialog');
+let   tnPage       = 1;
+
+let currentGruppeId = null;
+let gmPage = 1;
+let gkPage = 1;
+let gkAdded = 0;
+let gkTimer = null;
+
+function buildPageLinks(page, pages, gotoFn) {
+  const s = Math.max(1, page - 2);
+  const e = Math.min(pages, page + 2);
+  let h = '';
+  if (s > 1) {
+    h += `<button type="button" class="page-link" onclick="${gotoFn}(1)">1</button>`;
+    if (s > 2) h += '<span class="page-ellipsis"><i class="fa-solid fa-ellipsis"></i></span>';
+  }
+  for (let i = s; i <= e; i++)
+    h += i === page
+      ? `<span class="page-link active">${i}</span>`
+      : `<button type="button" class="page-link" onclick="${gotoFn}(${i})">${i}</button>`;
+  if (e < pages) {
+    if (e < pages - 1) h += '<span class="page-ellipsis"><i class="fa-solid fa-ellipsis"></i></span>';
+    h += `<button type="button" class="page-link" onclick="${gotoFn}(${pages})">${pages}</button>`;
+  }
+  return h;
+}
+let   tnAdded      = 0;
+let   tnTimer      = null;
+
+document.getElementById('tn-open-dialog').addEventListener('click', () => {
+  tnPage = 1; tnAdded = 0;
+  document.getElementById('tn-q').value   = '';
+  document.getElementById('tn-typ').value = '';
+  tnDialog.showModal();
+  loadTn();
+});
+
+document.getElementById('tn-close').addEventListener('click', () => tnDialog.close());
+tnDialog.addEventListener('click', e => { if (e.target === tnDialog) tnDialog.close(); });
+tnDialog.addEventListener('close', () => { if (tnAdded > 0) { tnAdded = 0; loadParticipants(); } });
+
+document.getElementById('tn-q').addEventListener('input', () => {
+  clearTimeout(tnTimer);
+  tnTimer = setTimeout(() => { tnPage = 1; loadTn(); }, 280);
+});
+document.getElementById('tn-typ').addEventListener('change', () => { tnPage = 1; loadTn(); });
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function loadTn() {
+  const q   = document.getElementById('tn-q').value;
+  const typ = document.getElementById('tn-typ').value;
+  document.getElementById('tn-body').innerHTML   = '<p class="tn-loading">Laden …</p>';
+  document.getElementById('tn-footer').innerHTML = '';
+  try {
+    const r = await fetch(
+      `/admin/veranstaltungen/teilnehmer_ajax.php?veranstaltung_id=${tnVid}&q=${encodeURIComponent(q)}&typ=${encodeURIComponent(typ)}&page=${tnPage}`
+    );
+    renderTn(await r.json());
+  } catch {
+    document.getElementById('tn-body').innerHTML = '<p class="tn-loading">Fehler beim Laden.</p>';
+  }
+}
+
+function renderTn(data) {
+  const body   = document.getElementById('tn-body');
+  const footer = document.getElementById('tn-footer');
+
+  if (!data.rows?.length) {
+    body.innerHTML   = '<p class="member-empty">Keine Ergebnisse.</p>';
+    footer.innerHTML = '';
+    return;
+  }
+
+  body.innerHTML = data.rows.map(r => {
+    const bc = r.typ === 'kuenstler' ? 'badge-kuenstler' : 'badge-type';
+    const bl = r.typ === 'kuenstler' ? 'Künstler' : 'Gruppe';
+    return `<div class="tn-row" data-id="${r.id}">
+      <span class="badge ${bc}">${bl}</span>
+      <span class="tn-row-name">${escHtml(r.name)}</span>
+      <input type="text" class="tisch-input" placeholder="Tischnr." autocomplete="off">
+      <button type="button" class="btn btn-primary btn-sm" onclick="addTn(${r.id},this)">Hinzufügen</button>
+    </div>`;
+  }).join('');
+
+  const from = (data.page - 1) * data.per + 1;
+  const to   = Math.min(data.page * data.per, data.total);
+  let   pag  = `<span class="pagination-info">${from}–${to} von ${data.total}</span>`;
+  if (data.pages > 1) {
+    pag += '<div class="page-links">';
+    pag += `<button type="button" class="page-link${data.page<=1?' disabled':''}" onclick="tnGo(${data.page-1})">‹</button>`;
+    pag += buildPageLinks(data.page, data.pages, 'tnGo');
+    pag += `<button type="button" class="page-link${data.page>=data.pages?' disabled':''}" onclick="tnGo(${data.page+1})">›</button>`;
+    pag += '</div>';
+  }
+  footer.innerHTML = pag;
+}
+
+function tnGo(page) { tnPage = page; loadTn(); }
+
+// Neuen Teilnehmer erstellen
+const createDialog  = document.getElementById('tn-create-dialog');
+const createTypSel  = document.getElementById('tn-create-typ');
+const createGrpWrap = document.getElementById('tn-create-gruppe-typ-wrap');
+const createErrEl   = document.getElementById('tn-create-error');
+
+document.getElementById('tn-create-open').addEventListener('click', () => {
+  createErrEl.style.display = 'none';
+  document.getElementById('tn-create-name').value    = '';
+  document.getElementById('tn-create-tischnr').value = '';
+  createTypSel.value = 'kuenstler';
+  createGrpWrap.style.display = 'none';
+  createDialog.showModal();
+  document.getElementById('tn-create-name').focus();
+});
+
+document.getElementById('tn-create-close').addEventListener('click',  () => createDialog.close());
+document.getElementById('tn-create-cancel').addEventListener('click', () => createDialog.close());
+createDialog.addEventListener('click', e => { if (e.target === createDialog) createDialog.close(); });
+
+createTypSel.addEventListener('change', () => {
+  createGrpWrap.style.display = createTypSel.value === 'gruppe' ? '' : 'none';
+});
+
+document.getElementById('tn-create-submit').addEventListener('click', async () => {
+  const typ       = createTypSel.value;
+  const name      = document.getElementById('tn-create-name').value.trim();
+  const grpTyp    = document.getElementById('tn-create-gruppe-typ').value;
+  const tischnr   = document.getElementById('tn-create-tischnr').value.trim();
+  const addToEvt  = document.getElementById('tn-create-add-to-event').checked;
+
+  createErrEl.style.display = 'none';
+  if (!name) {
+    createErrEl.textContent = 'Name ist ein Pflichtfeld.';
+    createErrEl.style.display = '';
+    return;
+  }
+
+  const btn = document.getElementById('tn-create-submit');
+  btn.disabled = true;
+  btn.textContent = 'Erstellen …';
+
+  const fd = new FormData();
+  fd.append('typ', typ);
+  fd.append('name', name);
+  if (typ === 'gruppe') fd.append('gruppe_typ', grpTyp);
+  fd.append('veranstaltung_id', partVid);
+  fd.append('add_to_event', addToEvt ? '1' : '0');
+  if (tischnr) fd.append('tischnummer', tischnr);
+
+  try {
+    const r = await fetch('/admin/veranstaltungen/teilnehmer_create_ajax.php', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.ok) {
+      createDialog.close();
+      if (addToEvt) loadParticipants();
+    } else {
+      createErrEl.textContent = d.error || 'Fehler beim Erstellen.';
+      createErrEl.style.display = '';
+    }
+  } catch {
+    createErrEl.textContent = 'Fehler beim Erstellen.';
+    createErrEl.style.display = '';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Erstellen';
+  }
+});
+
+const titelbildVid   = {{ id }};
+const titelbildInput = document.getElementById('titelbild-input');
+
+document.getElementById('titelbild-preview-dialog').addEventListener('click', function(e) {
+  if (e.target === this) this.close();
+});
+
+function titelbildPreview(url) {
+  document.getElementById('titelbild-preview-img').src = url;
+  document.getElementById('titelbild-preview-dialog').showModal();
+}
+
+titelbildInput.addEventListener('change', async () => {
+  const file = titelbildInput.files[0];
+  if (!file) return;
+  titelbildInput.value = '';
+  const fd = new FormData();
+  fd.append('veranstaltung_id', titelbildVid);
+  fd.append('bild', file);
+  const errEl = document.getElementById('titelbild-error');
+  errEl.innerHTML = '';
+  try {
+    const r = await fetch('/admin/veranstaltungen/titelbild_upload.php', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.error) { errEl.innerHTML = `<p class="bild-error">${d.error}</p>`; return; }
+    document.getElementById('titelbild-wrap').innerHTML =
+      `<div class="titelbild-preview">
+        <img src="${d.url}" alt="Titelbild" class="titelbild-img"
+             onclick="titelbildPreview('${d.url_full}')">
+        <button type="button" class="btn btn-ghost btn-sm"
+                style="color:var(--danger);margin-top:.625rem"
+                onclick="titelbildDelete()">Titelbild entfernen</button>
+      </div>`;
+  } catch { errEl.innerHTML = '<p class="bild-error">Upload fehlgeschlagen</p>'; }
+});
+
+async function titelbildDelete() {
+  if (!confirm('Titelbild unwiderruflich entfernen?')) return;
+  const fd = new FormData();
+  fd.append('veranstaltung_id', titelbildVid);
+  try {
+    const r = await fetch('/admin/veranstaltungen/titelbild_delete.php', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.ok) {
+      document.getElementById('titelbild-wrap').innerHTML =
+        '<p class="bild-empty">Kein Titelbild hochgeladen.</p>';
+    }
+  } catch {}
+}
+
+async function addTn(tid, btn) {
+  const row = btn.closest('.tn-row');
+  const nr  = row.querySelector('.tisch-input').value.trim();
+  btn.disabled = true;
+  btn.textContent = '…';
+
+  const fd = new FormData();
+  fd.append('veranstaltung_id', tnVid);
+  fd.append('teilnehmer_id', tid);
+  fd.append('tischnummer', nr);
+
+  try {
+    const r    = await fetch('/admin/veranstaltungen/teilnehmer_ajax.php', { method: 'POST', body: fd });
+    const data = await r.json();
+    if (data.ok) {
+      tnAdded++;
+      row.style.opacity = '.4';
+      btn.textContent   = '✓ Hinzugefügt';
+      btn.className     = 'btn btn-ghost btn-sm';
+      setTimeout(() => { row.remove(); if (!document.querySelector('.tn-row')) loadTn(); }, 900);
+    } else {
+      btn.disabled = false; btn.textContent = 'Hinzufügen';
+    }
+  } catch {
+    btn.disabled = false; btn.textContent = 'Hinzufügen';
+  }
+}
+
+// Participants list
+const partVid = {{ id }};
+let   partPage  = 1;
+let   partTimer = null;
+
+async function loadParticipants(page) {
+  partPage = page ?? partPage;
+  const q = document.getElementById('tn-list-q').value;
+  document.getElementById('tn-list-wrap').innerHTML =
+    '<p class="member-empty" style="padding:1rem 1.25rem">Laden …</p>';
+  try {
+    const r = await fetch(
+      `/admin/veranstaltungen/participants.php?veranstaltung_id=${partVid}&q=${encodeURIComponent(q)}&page=${partPage}`
+    );
+    renderParticipants(await r.json());
+  } catch {
+    document.getElementById('tn-list-wrap').innerHTML =
+      '<p class="member-empty" style="padding:1rem 1.25rem">Fehler beim Laden.</p>';
+  }
+}
+
+function renderParticipants(data) {
+  const wrap  = document.getElementById('tn-list-wrap');
+  const pagEl = document.getElementById('tn-list-pagination');
+  document.getElementById('tn-count').textContent =
+    `${data.total} ${data.total === 1 ? 'Eintrag' : 'Einträge'}`;
+
+  if (!data.rows.length) {
+    wrap.innerHTML  = '<p class="member-empty" style="padding:1rem 1.25rem">Keine Einträge.</p>';
+    pagEl.innerHTML = '';
+    return;
+  }
+
+  wrap.innerHTML = '<ul class="teilnehmer-list">' + data.rows.map(p => {
+    const editUrl  = p.typ === 'kuenstler'
+      ? `/admin/kuenstler/form.php?id=${p.id}`
+      : `/admin/gruppen/form.php?id=${p.id}`;
+    const bc = p.typ === 'kuenstler' ? 'badge-kuenstler' : 'badge-type';
+    const bl = p.typ === 'kuenstler' ? 'Künstler' : 'Gruppe';
+    return `<li class="teilnehmer-item">
+      <div class="teilnehmer-row">
+        <span class="badge ${bc}">${bl}</span>
+        <a href="${editUrl}" class="member-name"
+           onclick="openTnEditDialog(${p.id}); return false;">${escHtml(p.name)}</a>
+        <div class="tisch-edit">
+          <input type="text" class="tisch-input" placeholder="Tischnr."
+                 value="${escHtml(p.tischnummer ?? '')}"
+                 data-tid="${p.id}" data-orig="${escHtml(p.tischnummer ?? '')}">
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm member-remove"
+                title="Entfernen" data-tid="${p.id}">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+    </li>`;
+  }).join('') + '</ul>';
+
+  wrap.querySelectorAll('.member-remove').forEach(btn =>
+    btn.addEventListener('click', () => removePart(btn.dataset.tid))
+  );
+  wrap.querySelectorAll('.tisch-input').forEach(inp =>
+    inp.addEventListener('blur', () => updateTischnummer(inp))
+  );
+
+  if (data.pages > 1) {
+    const from = (data.page - 1) * data.per + 1;
+    const to   = Math.min(data.page * data.per, data.total);
+    let pag = `<div class="pagination" style="padding:.625rem 1.25rem">
+      <span class="pagination-info">${from}–${to} von ${data.total}</span>
+      <div class="page-links">`;
+    pag += `<button class="page-link${data.page<=1?' disabled':''}" type="button"
+                    onclick="loadParticipants(${data.page-1})">‹</button>`;
+    pag += buildPageLinks(data.page, data.pages, 'loadParticipants');
+    pag += `<button class="page-link${data.page>=data.pages?' disabled':''}" type="button"
+                    onclick="loadParticipants(${data.page+1})">›</button>`;
+    pag += '</div></div>';
+    pagEl.innerHTML = pag;
+  } else {
+    pagEl.innerHTML = '';
+  }
+}
+
+async function removePart(tid) {
+  if (!confirm('Teilnehmer wirklich entfernen?')) return;
+  const fd = new FormData();
+  fd.append('veranstaltung_id', partVid);
+  fd.append('teilnehmer_id', tid);
+  fd.append('action', 'remove');
+  try {
+    const r = await fetch('/admin/veranstaltungen/participants.php', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.ok) loadParticipants();
+  } catch {}
+}
+
+async function updateTischnummer(inp) {
+  const orig = inp.dataset.orig ?? '';
+  const val  = inp.value.trim();
+  if (val === orig.trim()) return;
+  const fd = new FormData();
+  fd.append('veranstaltung_id', partVid);
+  fd.append('teilnehmer_id', inp.dataset.tid);
+  fd.append('tischnummer', val);
+  fd.append('action', 'update_tischnummer');
+  try {
+    const r = await fetch('/admin/veranstaltungen/participants.php', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.ok) inp.dataset.orig = val;
+  } catch {}
+}
+
+document.getElementById('tn-list-q').addEventListener('input', () => {
+  clearTimeout(partTimer);
+  partTimer = setTimeout(() => loadParticipants(1), 280);
+});
+
+loadParticipants(1);
+
+// ─── Teilnehmer bearbeiten ─────────────────────────────────────
+
+function switchTnEditLang(btn, lang) {
+  document.querySelectorAll('#tn-edit-dialog .lang-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  else document.querySelector(`#tn-edit-dialog .lang-tab[onclick*="'${lang}'"]`)?.classList.add('active');
+  document.getElementById('tn-edit-panel-de').style.display = lang === 'de' ? '' : 'none';
+  document.getElementById('tn-edit-panel-en').style.display = lang === 'en' ? '' : 'none';
+}
+
+const tnEditDialog = document.getElementById('tn-edit-dialog');
+
+async function openTnEditDialog(tid) {
+  window._tt.ensureTnEditEditor();
+  const errEl = document.getElementById('tn-edit-error');
+  errEl.style.display = 'none';
+  document.getElementById('tn-edit-id').value = tid;
+  document.getElementById('tn-edit-name').value = '';
+  document.getElementById('tn-edit-link').value = '';
+  document.getElementById('tn-edit-gruppe-typ-wrap').style.display = 'none';
+  window._tt.tnEdit.commands.clearContent();
+  window._tt.tnEditEN.commands.clearContent();
+  switchTnEditLang(null, 'de');
+  tnEditDialog.showModal();
+  try {
+    const r = await fetch(`/admin/veranstaltungen/teilnehmer_edit_ajax.php?id=${tid}`);
+    const d = await r.json();
+    if (!d.ok) return;
+    const t = d.teilnehmer;
+    document.getElementById('tn-edit-title').textContent =
+      (t.typ === 'kuenstler' ? 'Künstler' : 'Gruppe') + ' bearbeiten';
+    document.getElementById('tn-edit-name').value = t.name || '';
+    document.getElementById('tn-edit-link').value = t.link || '';
+    const membersEl = document.getElementById('tn-edit-gruppe-members');
+    if (t.typ === 'gruppe') {
+      document.getElementById('tn-edit-gruppe-typ-wrap').style.display = '';
+      document.getElementById('tn-edit-gruppe-typ').value = t.gruppe_typ || '';
+      membersEl.style.display = '';
+      currentGruppeId = t.id;
+      gmPage = 1;
+      loadGruppeMitglieder(1);
+    } else {
+      membersEl.style.display = 'none';
+      currentGruppeId = null;
+    }
+    if (t.beschreibung)    window._tt.tnEdit.commands.setContent(t.beschreibung);
+    if (t.beschreibung_en) window._tt.tnEditEN.commands.setContent(t.beschreibung_en);
+  } catch {}
+}
+
+document.getElementById('tn-edit-close').addEventListener('click',  () => tnEditDialog.close());
+document.getElementById('tn-edit-cancel').addEventListener('click', () => tnEditDialog.close());
+tnEditDialog.addEventListener('click', e => { if (e.target === tnEditDialog) tnEditDialog.close(); });
+tnEditDialog.addEventListener('close', () => { currentGruppeId = null; });
+
+document.getElementById('tn-edit-submit').addEventListener('click', async () => {
+  const errEl = document.getElementById('tn-edit-error');
+  errEl.style.display = 'none';
+  const name = document.getElementById('tn-edit-name').value.trim();
+  if (!name) { errEl.textContent = 'Name ist ein Pflichtfeld.'; errEl.style.display = ''; return; }
+
+  const beschr    = window._tt.edHTML(window._tt.tnEdit);
+  const beschr_en = window._tt.edHTML(window._tt.tnEditEN);
+
+  const fd = new FormData();
+  fd.append('id',              document.getElementById('tn-edit-id').value);
+  fd.append('name',            name);
+  fd.append('beschreibung',    beschr);
+  fd.append('beschreibung_en', beschr_en);
+  fd.append('link',            document.getElementById('tn-edit-link').value.trim());
+  if (document.getElementById('tn-edit-gruppe-typ-wrap').style.display !== 'none')
+    fd.append('gruppe_typ', document.getElementById('tn-edit-gruppe-typ').value);
+
+  const btn = document.getElementById('tn-edit-submit');
+  btn.disabled = true; btn.textContent = 'Speichern …';
+  try {
+    const r = await fetch('/admin/veranstaltungen/teilnehmer_edit_ajax.php', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.ok) { tnEditDialog.close(); loadParticipants(); }
+    else { errEl.textContent = d.error || 'Fehler.'; errEl.style.display = ''; }
+  } catch { errEl.textContent = 'Fehler beim Speichern.'; errEl.style.display = ''; }
+  finally { btn.disabled = false; btn.textContent = 'Speichern'; }
+});
+
+// ─── Gruppe Mitglieder (Künstler in Gruppe) ────────────────────
+
+const gkDialog = document.getElementById('gruppe-k-dialog');
+
+async function loadGruppeMitglieder(page) {
+  gmPage = page ?? gmPage;
+  document.getElementById('tn-edit-mitglieder-list').innerHTML = '<p class="member-empty">Laden …</p>';
+  document.getElementById('tn-edit-mitglieder-pag').innerHTML  = '';
+  try {
+    const r = await fetch(`/admin/veranstaltungen/gruppe_members_ajax.php?gruppe_id=${currentGruppeId}&mode=members&page=${gmPage}`);
+    renderGruppeMitglieder(await r.json());
+  } catch {
+    document.getElementById('tn-edit-mitglieder-list').innerHTML = '<p class="member-empty">Fehler beim Laden.</p>';
+  }
+}
+
+function renderGruppeMitglieder(data) {
+  const listEl = document.getElementById('tn-edit-mitglieder-list');
+  const pagEl  = document.getElementById('tn-edit-mitglieder-pag');
+
+  if (!data.rows?.length) {
+    listEl.innerHTML = '<p class="member-empty">Noch keine Künstler zugeordnet.</p>';
+    pagEl.innerHTML  = '';
+    return;
+  }
+
+  listEl.innerHTML = '<ul class="member-list">' + data.rows.map(r =>
+    `<li class="member-item">
+      <span class="member-name">${escHtml(r.name)}</span>
+      <button type="button" class="btn btn-ghost btn-sm member-remove"
+              title="Entfernen" onclick="removeKuenstlerFromGruppe(${r.id})">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </li>`
+  ).join('') + '</ul>';
+
+  if (data.pages > 1) {
+    const from = (data.page - 1) * data.per + 1;
+    const to   = Math.min(data.page * data.per, data.total);
+    pagEl.innerHTML = `<div class="pagination" style="padding:.5rem .75rem">
+      <span class="pagination-info">${from}–${to} von ${data.total}</span>
+      <div class="page-links">
+        <button type="button" class="page-link${data.page<=1?' disabled':''}" onclick="loadGruppeMitglieder(${data.page-1})">‹</button>
+        ${buildPageLinks(data.page, data.pages, 'loadGruppeMitglieder')}
+        <button type="button" class="page-link${data.page>=data.pages?' disabled':''}" onclick="loadGruppeMitglieder(${data.page+1})">›</button>
+      </div>
+    </div>`;
+  } else {
+    pagEl.innerHTML = '';
+  }
+}
+
+async function removeKuenstlerFromGruppe(kid) {
+  if (!currentGruppeId) return;
+  const fd = new FormData();
+  fd.append('gruppe_id',    currentGruppeId);
+  fd.append('kuenstler_id', kid);
+  fd.append('action',       'remove');
+  try {
+    const r = await fetch('/admin/veranstaltungen/gruppe_members_ajax.php', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.ok) loadGruppeMitglieder();
+  } catch {}
+}
+
+document.getElementById('tn-edit-add-kuenstler').addEventListener('click', () => {
+  gkPage = 1; gkAdded = 0;
+  document.getElementById('gk-q').value = '';
+  gkDialog.showModal();
+  loadGruppeAvailable();
+});
+
+document.getElementById('gk-close').addEventListener('click', () => gkDialog.close());
+gkDialog.addEventListener('click', e => { if (e.target === gkDialog) gkDialog.close(); });
+gkDialog.addEventListener('close', () => { if (gkAdded > 0) { gkAdded = 0; loadGruppeMitglieder(1); } });
+
+document.getElementById('gk-q').addEventListener('input', () => {
+  clearTimeout(gkTimer);
+  gkTimer = setTimeout(() => { gkPage = 1; loadGruppeAvailable(); }, 280);
+});
+
+async function loadGruppeAvailable() {
+  const q = document.getElementById('gk-q').value;
+  document.getElementById('gk-body').innerHTML   = '<p class="tn-loading">Laden …</p>';
+  document.getElementById('gk-footer').innerHTML = '';
+  try {
+    const r = await fetch(
+      `/admin/veranstaltungen/gruppe_members_ajax.php?gruppe_id=${currentGruppeId}&mode=available&page=${gkPage}&q=${encodeURIComponent(q)}`
+    );
+    renderGruppeAvailable(await r.json());
+  } catch {
+    document.getElementById('gk-body').innerHTML = '<p class="tn-loading">Fehler beim Laden.</p>';
+  }
+}
+
+function renderGruppeAvailable(data) {
+  const body   = document.getElementById('gk-body');
+  const footer = document.getElementById('gk-footer');
+
+  if (!data.rows?.length) {
+    body.innerHTML   = '<p class="member-empty">Keine Ergebnisse.</p>';
+    footer.innerHTML = '';
+    return;
+  }
+
+  body.innerHTML = data.rows.map(r =>
+    `<div class="tn-row" data-id="${r.id}">
+      <span class="tn-row-name">${escHtml(r.name)}</span>
+      <button type="button" class="btn btn-primary btn-sm" onclick="addKuenstlerToGruppe(${r.id}, this)">Hinzufügen</button>
+    </div>`
+  ).join('');
+
+  const from = (data.page - 1) * data.per + 1;
+  const to   = Math.min(data.page * data.per, data.total);
+  let   pag  = `<span class="pagination-info">${from}–${to} von ${data.total}</span>`;
+  if (data.pages > 1) {
+    pag += '<div class="page-links">';
+    pag += `<button type="button" class="page-link${data.page<=1?' disabled':''}" onclick="gkGo(${data.page-1})">‹</button>`;
+    pag += buildPageLinks(data.page, data.pages, 'gkGo');
+    pag += `<button type="button" class="page-link${data.page>=data.pages?' disabled':''}" onclick="gkGo(${data.page+1})">›</button>`;
+    pag += '</div>';
+  }
+  footer.innerHTML = pag;
+}
+
+function gkGo(page) { gkPage = page; loadGruppeAvailable(); }
+
+async function addKuenstlerToGruppe(kid, btn) {
+  if (!currentGruppeId) return;
+  btn.disabled = true;
+  const fd = new FormData();
+  fd.append('gruppe_id',    currentGruppeId);
+  fd.append('kuenstler_id', kid);
+  fd.append('action',       'add');
+  try {
+    const r = await fetch('/admin/veranstaltungen/gruppe_members_ajax.php', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.ok) {
+      gkAdded++;
+      const row = btn.closest('.tn-row');
+      if (row) { row.style.opacity = '.4'; row.style.pointerEvents = 'none'; }
+      btn.textContent = 'Hinzugefügt';
+    } else {
+      btn.disabled = false;
+    }
+  } catch { btn.disabled = false; }
+}
+
+// ─── Programmpunkte Dialog ─────────────────────────────────────
+
+const progDialog  = document.getElementById('prog-dialog');
+const progTage    = {{ tage|json_encode|raw }}.map(t => t.datum);
+const WD = ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'];
+
+function fmtDatum(d) { const [y,m,t] = d.split('-'); return `${t}.${m}.${y}`; }
+function fmtWd(d)    { return WD[new Date(d + 'T12:00:00').getDay()] ?? ''; }
+
+let progAllParticipants = [];
+let progSelectedTns     = new Map(); // id(int) → name
+
+function progRenderChips() {
+  const el = document.getElementById('prog-tn-chips');
+  el.innerHTML = [...progSelectedTns.entries()].map(([id, name]) =>
+    `<span style="display:inline-flex;align-items:center;gap:.375rem;padding:.25rem .625rem;background:var(--bg-muted,#f1f5f9);border:1px solid var(--border);border-radius:20px;font-size:.8125rem">
+      ${escHtml(name)}
+      <button type="button" class="prog-chip-rm" data-id="${id}"
+              style="background:none;border:none;cursor:pointer;color:var(--text-muted);line-height:1;padding:0" title="Entfernen">✕</button>
+    </span>`
+  ).join('');
+}
+
+function progRenderDropdown() {
+  const term = document.getElementById('prog-tn-search').value.toLowerCase();
+  const dd   = document.getElementById('prog-tn-dropdown');
+  const pool = progAllParticipants.filter(p => !progSelectedTns.has(parseInt(p.id)));
+  const hits = term ? pool.filter(p => p.name.toLowerCase().includes(term)) : pool;
+  if (!hits.length) {
+    dd.innerHTML = `<div style="padding:.5rem .75rem;color:var(--text-muted);font-size:.875rem">${term ? 'Keine Ergebnisse.' : 'Alle bereits ausgewählt.'}</div>`;
+  } else {
+    dd.innerHTML = hits.map(p =>
+      `<button type="button" class="prog-tn-opt" data-id="${parseInt(p.id)}"
+        style="display:block;width:100%;text-align:left;padding:.5rem .75rem;border:none;background:none;cursor:pointer;font-size:.875rem;border-bottom:1px solid var(--border)">
+        ${escHtml(p.name)}
+      </button>`
+    ).join('');
+  }
+  dd.style.display = '';
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('#prog-tn-section')) {
+    const dd = document.getElementById('prog-tn-dropdown');
+    if (dd) dd.style.display = 'none';
+  }
+});
+
+function switchProgLang(btn, lang) {
+  btn.closest('.lang-tabs').querySelectorAll('.lang-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('prog-panel-de').style.display = lang === 'de' ? '' : 'none';
+  document.getElementById('prog-panel-en').style.display = lang === 'en' ? '' : 'none';
+}
+
+function buildDatumOptions(selected) {
+  return progTage.map(d =>
+    `<option value="${d}"${d === selected ? ' selected' : ''}>${fmtWd(d)}, ${fmtDatum(d)}</option>`
+  ).join('');
+}
+
+async function openProgDialog(pid, defaultDatum) {
+  window._tt.ensureProgEditors();
+  document.getElementById('prog-dialog-error').style.display = 'none';
+  document.getElementById('prog-id').value     = pid || '';
+  document.getElementById('prog-datum').innerHTML = buildDatumOptions(defaultDatum || '');
+  document.getElementById('prog-uhrzeit').value   = '';
+  document.getElementById('prog-ort-name').value     = '';
+  document.getElementById('prog-ort-name-en').value  = '';
+  window._tt.progTitel.commands.clearContent();
+  window._tt.progBeschr.commands.clearContent();
+  window._tt.progTitelEN.commands.clearContent();
+  window._tt.progBeschrEN.commands.clearContent();
+  progSelectedTns = new Map();
+  progRenderChips();
+  document.getElementById('prog-tn-search').value = '';
+  document.getElementById('prog-tn-dropdown').style.display = 'none';
+  document.getElementById('prog-tn-section').style.display = 'none';
+  document.getElementById('prog-dialog-title').textContent    = pid ? 'Programmpunkt bearbeiten' : 'Programmpunkt hinzufügen';
+  document.getElementById('prog-dialog-submit').textContent   = pid ? 'Speichern' : 'Hinzufügen';
+  progDialog.showModal();
+
+  try {
+    const url = `/admin/veranstaltungen/programm_ajax.php?veranstaltung_id=${partVid}${pid ? '&id=' + pid : ''}`;
+    const r = await fetch(url);
+    const d = await r.json();
+    if (!d.ok) return;
+
+    if (d.entry) {
+      document.getElementById('prog-datum').innerHTML    = buildDatumOptions(d.entry.datum);
+      document.getElementById('prog-uhrzeit').value      = (d.entry.uhrzeit || '').slice(0, 5);
+      document.getElementById('prog-ort-name').value     = d.entry.ort_name    || '';
+      document.getElementById('prog-ort-name-en').value  = d.entry.ort_name_en || '';
+      if (d.entry.titel)           window._tt.progTitel.commands.setContent(d.entry.titel);
+      if (d.entry.titel_en)        window._tt.progTitelEN.commands.setContent(d.entry.titel_en);
+      if (d.entry.beschreibung)    window._tt.progBeschr.commands.setContent(d.entry.beschreibung);
+      if (d.entry.beschreibung_en) window._tt.progBeschrEN.commands.setContent(d.entry.beschreibung_en);
+    }
+
+    if (d.participants.length) {
+      progAllParticipants = d.participants;
+      const assigned = d.assigned.map(Number);
+      progSelectedTns = new Map(
+        d.participants.filter(p => assigned.includes(parseInt(p.id))).map(p => [parseInt(p.id), p.name])
+      );
+      progRenderChips();
+      document.getElementById('prog-tn-section').style.display = '';
+    } else {
+      progAllParticipants = [];
+      document.getElementById('prog-tn-section').style.display = 'none';
+    }
+  } catch {}
+}
+
+document.getElementById('prog-dialog-close').addEventListener('click',  () => progDialog.close());
+document.getElementById('prog-dialog-cancel').addEventListener('click', () => progDialog.close());
+progDialog.addEventListener('click', e => { if (e.target === progDialog) progDialog.close(); });
+
+document.getElementById('prog-tn-chips').addEventListener('click', e => {
+  const btn = e.target.closest('.prog-chip-rm');
+  if (!btn) return;
+  progSelectedTns.delete(parseInt(btn.dataset.id));
+  progRenderChips();
+  if (document.getElementById('prog-tn-dropdown').style.display !== 'none') progRenderDropdown();
+});
+
+document.getElementById('prog-tn-dropdown').addEventListener('click', e => {
+  const btn = e.target.closest('.prog-tn-opt');
+  if (!btn) return;
+  const id = parseInt(btn.dataset.id);
+  const p  = progAllParticipants.find(p => parseInt(p.id) === id);
+  if (p) progSelectedTns.set(id, p.name);
+  progRenderChips();
+  document.getElementById('prog-tn-search').value = '';
+  document.getElementById('prog-tn-dropdown').style.display = 'none';
+});
+
+document.getElementById('prog-tn-search').addEventListener('focus', () => progRenderDropdown());
+document.getElementById('prog-tn-search').addEventListener('input', () => progRenderDropdown());
+
+document.getElementById('prog-dialog-submit').addEventListener('click', async () => {
+  const errEl = document.getElementById('prog-dialog-error');
+  errEl.style.display = 'none';
+
+  const tt = window._tt;
+  const fd = new FormData();
+  fd.append('veranstaltung_id', partVid);
+  fd.append('id',          document.getElementById('prog-id').value || '');
+  fd.append('datum',       document.getElementById('prog-datum').value);
+  fd.append('uhrzeit',     document.getElementById('prog-uhrzeit').value);
+  fd.append('titel',          tt.edHTML(tt.progTitel));
+  fd.append('titel_en',       tt.edHTML(tt.progTitelEN));
+  fd.append('beschreibung',   tt.edHTML(tt.progBeschr));
+  fd.append('beschreibung_en', tt.edHTML(tt.progBeschrEN));
+  fd.append('ort_name',    document.getElementById('prog-ort-name').value);
+  fd.append('ort_name_en', document.getElementById('prog-ort-name-en').value);
+  progSelectedTns.forEach((name, id) => fd.append('teilnehmer[]', id));
+
+  const btn = document.getElementById('prog-dialog-submit');
+  const origText = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Speichern …';
+  try {
+    const r = await fetch('/admin/veranstaltungen/programm_ajax.php', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.ok) { progDialog.close(); refreshProgTile(d.datum); }
+    else {
+      const msg = d.errors ? d.errors.join(' ') : (d.error || 'Fehler.');
+      errEl.textContent = msg; errEl.style.display = '';
+    }
+  } catch { errEl.textContent = 'Fehler beim Speichern.'; errEl.style.display = ''; }
+  finally { btn.disabled = false; btn.textContent = origText; }
+});
+
+async function deleteProgEntry(pid, datum) {
+  if (!confirm('Programmpunkt wirklich löschen?')) return;
+  const fd = new FormData();
+  fd.append('veranstaltung_id', partVid);
+  fd.append('action', 'delete');
+  fd.append('id', pid);
+  try {
+    const r = await fetch('/admin/veranstaltungen/programm_ajax.php', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.ok) refreshProgTile(datum);
+  } catch {}
+}
+
+async function refreshProgTile(datum) {
+  try {
+    const r = await fetch(`/admin/veranstaltungen/programm_ajax.php?veranstaltung_id=${partVid}&action=list&datum=${datum}`);
+    const d = await r.json();
+    if (!d.ok) return;
+    const el = document.querySelector(`.tag-tile-prog[data-datum="${datum}"]`);
+    if (!el) return;
+    el.innerHTML = d.entries.map(e => `
+      <div class="tag-tile-prog-item">
+        <div class="tag-tile-prog-time">${escHtml((e.uhrzeit || '').slice(0, 5))}</div>
+        <div class="tag-tile-prog-body">
+          <div class="tag-tile-prog-title">${escHtml(stripTags(e.titel || ''))}</div>
+          ${e.ort_name ? `<div class="tag-tile-prog-loc">${escHtml(e.ort_name)}</div>` : ''}
+        </div>
+        <div class="tag-tile-prog-actions">
+          <button type="button" class="btn btn-ghost btn-sm"
+                  onclick="openProgDialog(${e.id},'${datum}')">Bearbeiten</button>
+          <button type="button" class="btn btn-ghost btn-sm" style="color:var(--danger)"
+                  onclick="deleteProgEntry(${e.id},'${datum}')">Löschen</button>
+        </div>
+      </div>`).join('')
+      + (d.entries.length === 0 ? '<div class="tag-tile-empty">Noch keine Programmpunkte für diesen Tag.</div>' : '')
+      + `<a href="#" class="tag-tile-add" onclick="openProgDialog(null,'${datum}'); return false;">
+           <i class="fa-solid fa-plus"></i> Programmpunkt hinzufügen
+         </a>`;
+  } catch {}
+}
+
+function stripTags(html) {
+  const el = document.createElement('div');
+  el.innerHTML = html;
+  return el.textContent || el.innerText || '';
+}
+</script>
+{% endif %}
+{% endblock %}

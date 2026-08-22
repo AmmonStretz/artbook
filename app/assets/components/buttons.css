@@ -1,0 +1,41 @@
+.pub-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.375rem;
+  border-radius: var(--radius);
+  font-size: 0.9375rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: 1px solid transparent;
+  text-decoration: none;
+}
+.pub-btn:hover {
+  text-decoration: none;
+}
+
+.pub-btn-primary {
+  background: var(--black);
+  color: #fff;
+  border-color: var(--black);
+}
+
+.pub-btn-outline {
+  background: transparent;
+  color: var(--black);
+  border-color: var(--black);
+}
+.pub-btn-outline:hover {
+  background: var(--black);
+  color: #fff;
+}
+
+.pub-btn-ghost {
+  background: transparent;
+  color: var(--mid);
+  border-color: var(--border);
+}
+.pub-btn-ghost:hover {
+  border-color: var(--mid);
+  color: var(--dark);
+}

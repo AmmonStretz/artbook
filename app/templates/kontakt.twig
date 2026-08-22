@@ -1,0 +1,124 @@
+{% extends 'base.twig' %}
+
+{% block content %}
+  <section class="detail-header" style="padding:2rem 0 1.75rem">
+    <div class="container">
+      <h1 class="detail-title">{{ t('contact.title') }}</h1>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top:2.5rem">
+    <div class="container">
+      <div class="contact-grid">
+
+        <div>
+          {% if in_bewerbung and active_event %}
+            {% set event_name = (lang == 'en' and active_event.name_en) ? active_event.name_en : active_event.name %}
+            <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:2px;padding:1rem 1.25rem;margin-bottom:1.5rem;font-size:.9rem;color:#0c4a6e">
+              <strong>{{ t('contact.application_open') }}</strong> – {{ t('contact.deadline') }}: {{ deadline|date('d.m.Y') }}<br>
+              {{ t('contact.apply_text')|replace({'%name%': '<strong>' ~ event_name ~ '</strong>'})|raw }}
+            </div>
+          {% endif %}
+
+          {% if sent %}
+            <div class="pub-alert pub-alert-success">
+              {{ t('contact.success') }}
+            </div>
+          {% else %}
+            {% if errors %}
+              <div class="pub-alert pub-alert-error">
+                {% for e in errors %}<div>{{ e }}</div>{% endfor %}
+              </div>
+            {% endif %}
+
+            <form method="post" class="contact-form">
+              <div class="cf-group">
+                <label class="cf-label" for="cf-name">{{ t('contact.field_name') }} <span class="req">*</span></label>
+                <input type="text" id="cf-name" name="name" class="cf-input" value="{{ post.name ?? '' }}" required>
+              </div>
+              <div class="cf-group">
+                <label class="cf-label" for="cf-email">{{ t('contact.field_email') }} <span class="req">*</span></label>
+                <input type="email" id="cf-email" name="email" class="cf-input" value="{{ post.email ?? '' }}" required>
+              </div>
+              <div class="cf-group">
+                <label class="cf-label" for="cf-betreff">{{ t('contact.field_subject') }}</label>
+                <input type="text" id="cf-betreff" name="betreff" class="cf-input" value="{{ post.betreff ?? '' }}">
+              </div>
+              {% if in_bewerbung and active_event %}
+                <div class="cf-group">
+                  <label class="cf-label" for="cf-veranstaltung">{{ t('contact.field_apply_for') }}</label>
+                  <input type="text" id="cf-veranstaltung" name="bewerbung_veranstaltung" class="cf-input"
+                         value="{{ post.bewerbung_veranstaltung ?? event_name }}">
+                </div>
+                <div class="cf-group">
+                  <label class="cf-label" for="cf-medium">{{ t('contact.field_medium') }}</label>
+                  <input type="text" id="cf-medium" name="bewerbung_medium" class="cf-input"
+                         placeholder="{{ t('contact.field_medium_ph') }}"
+                         value="{{ post.bewerbung_medium ?? '' }}">
+                </div>
+              {% endif %}
+              <div class="cf-group">
+                <label class="cf-label" for="cf-nachricht">{{ t('contact.field_message') }} <span class="req">*</span></label>
+                <textarea id="cf-nachricht" name="nachricht" class="cf-textarea" required>{{ post.nachricht ?? '' }}</textarea>
+              </div>
+              <div class="cf-submit">
+                <button type="submit" class="pub-btn pub-btn-primary">{{ t('contact.send') }}</button>
+              </div>
+            </form>
+          {% endif %}
+        </div>
+
+        <div class="contact-info-card">
+          <div class="contact-info-title">{{ t('contact.info_title') }}</div>
+          {% if meta.kontakt_adresse %}
+            <div class="contact-info-row">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
+              </svg>
+              <span>{{ meta.kontakt_adresse }}</span>
+            </div>
+          {% endif %}
+          {% if meta.kontakt_tel1 %}
+            <div class="contact-info-row">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8a19.79 19.79 0 01-3.07-8.68A2 2 0 012 0h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 14v3z"/>
+              </svg>
+              {{ meta.kontakt_tel1 }}
+            </div>
+          {% endif %}
+          {% if meta.kontakt_tel2 %}
+            <div class="contact-info-row">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8a19.79 19.79 0 01-3.07-8.68A2 2 0 012 0h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 14v3z"/>
+              </svg>
+              {{ meta.kontakt_tel2 }}
+            </div>
+          {% endif %}
+          {% if meta.kontakt_email %}
+            <div class="contact-info-row">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+              </svg>
+              <a href="mailto:{{ meta.kontakt_email }}">{{ meta.kontakt_email }}</a>
+            </div>
+          {% endif %}
+          {% if in_bewerbung and meta.bewerbung_formular %}
+            <div class="formular-download">
+              <div class="formular-download-title">{{ t('contact.form_title') }}</div>
+              <a href="{{ META_UPLOAD_URL ~ meta.bewerbung_formular }}" target="_blank"
+                 class="pub-btn pub-btn-outline" style="font-size:.875rem;padding:.5rem 1rem">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                {{ meta.bewerbung_formular_name ?? t('contact.form_download') }}
+              </a>
+            </div>
+          {% endif %}
+        </div>
+
+      </div>
+    </div>
+  </section>
+{% endblock %}

@@ -1,0 +1,128 @@
+.participant-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1.5rem;
+}
+
+.participant-card {
+  display: block;
+  text-decoration: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition:
+    box-shadow 0.15s,
+    transform 0.15s;
+}
+.participant-card:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  text-decoration: none;
+}
+
+.participant-thumb {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  background: var(--light);
+}
+
+.participant-thumb-placeholder {
+  width: 100%;
+  aspect-ratio: 1;
+  background: var(--light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--border);
+}
+
+.participant-info {
+  padding: 0.875rem 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.participant-name {
+  font-size: 0.9375rem;
+  color: var(--black);
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.participant-type {
+  font-size: 0.75rem;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.participant-stand {
+  font-size: 0.75rem;
+  color: var(--gold);
+  margin-top: 0.125rem;
+}
+
+.participant-events {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.participant-event-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  font-size: 0.8125rem;
+  color: var(--mid);
+  text-decoration: none;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
+}
+.participant-event-chip:hover {
+  border-color: var(--gold);
+  color: var(--dark);
+  text-decoration: none;
+}
+
+.participant-event-chip-year {
+  font-size: 0.75rem;
+  color: var(--gold);
+}
+
+.participant-card--static {
+  pointer-events: none;
+  cursor: default;
+}
+
+.participant-preview-wrap {
+  position: relative;
+  overflow: hidden;
+  max-height: 380px;
+}
+.participant-preview-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    transparent 30%,
+    rgba(255, 255, 255, 0.65) 58%,
+    #fff 82%
+  );
+  pointer-events: none;
+}
+
+.participant-preview-btn {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+  white-space: nowrap;
+}

@@ -1,0 +1,51 @@
+{% extends 'base.twig' %}
+
+{% block content %}
+  <section class="detail-header" style="padding:2rem 0 1.75rem">
+    <div class="container">
+      <h1 class="detail-title">{{ t('nav.events') }}</h1>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top:2rem">
+    <div class="container">
+      {% if not veranstaltungen %}
+        <p class="text-muted">{{ lang == 'en' ? 'No events planned.' : 'Keine geplanten Veranstaltungen.' }}</p>
+      {% else %}
+        <div style="display:flex;flex-direction:column;gap:1rem;max-width:760px">
+          {% for v in veranstaltungen %}
+            {% set card_img = titelbildCardUrl(v.titelbild) %}
+            {% set v_name = (lang == 'en' and v.name_en) ? v.name_en : v.name %}
+            <a href="{{ langUrl('/veranstaltung.php') }}?id={{ v.id }}" class="archive-card">
+              {% if card_img %}
+                <div class="archive-card-img">
+                  <img src="{{ card_img }}" alt="">
+                </div>
+              {% endif %}
+              <div class="archive-card-body">
+                <div class="archive-card-name">{{ v_name }}</div>
+                <div class="archive-card-meta">
+                  {% if v.erster_tag %}
+                    <span>{{ fmt(v.erster_tag) }}{{ v.letzter_tag != v.erster_tag ? ' – ' ~ fmt(v.letzter_tag) : '' }}</span>
+                  {% endif %}
+                  {% if v.ort_name or v.ort %}
+                    <span>{{ v.ort_name ?: ((v.plz ~ ' ' ~ v.ort)|trim) }}</span>
+                  {% endif %}
+                </div>
+              </div>
+            </a>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="archive-banner">
+    <div class="container">
+      <div class="section-title">{{ t('home.past_events') }}</div>
+      <div class="section-body">{{ t('home.past_events_desc') }}</div>
+      <a href="{{ langUrl('/archiv.php') }}" class="pub-btn"
+        style="background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.3)">{{ t('home.to_archive') }}</a>
+    </div>
+  </section>
+{% endblock %}

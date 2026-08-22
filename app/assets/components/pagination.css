@@ -1,0 +1,46 @@
+.pub-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 3rem;
+  flex-wrap: wrap;
+}
+
+.pub-page-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.25rem;
+  height: 2.25rem;
+  padding: 0 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  color: var(--mid);
+  transition: all 0.15s;
+  cursor: pointer;
+}
+.pub-page-link:hover {
+  border-color: var(--dark);
+  color: var(--dark);
+  text-decoration: none;
+}
+.pub-page-link.active {
+  background: var(--black);
+  color: #fff;
+  border-color: var(--black);
+}
+.pub-page-link.disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+.pub-page-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.25rem;
+  height: 2.25rem;
+  color: var(--mid);
+  font-size: 0.875rem;
+}

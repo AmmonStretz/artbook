@@ -1,0 +1,59 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --font: "Inter Variable", system-ui, sans-serif;
+  --font-sans: "Inter Variable", system-ui, sans-serif;
+  --black: #111;
+  --dark: #222;
+  --mid: #555;
+  --muted: #888;
+  --light: #f4f1ec;
+  --border: #ddd;
+  --accent: #1a1a1a;
+  --gold: #8b6f47;
+  --radius: 2px;
+  --max-w: 1024px;
+  --max-w-text: 720px;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-optical-sizing: auto;
+  color: var(--dark);
+  background: #fff;
+  line-height: 1.6;
+  font-size: 1rem;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+.text-muted {
+  color: var(--muted);
+}
+
+.results-info {
+  color: var(--muted);
+  font-size: 0.875rem;
+  margin-bottom: 1.25rem;
+}

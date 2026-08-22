@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{ page_title }} – {{ APP_NAME }}</title>
+<link rel="stylesheet" href="/assets/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="/assets/app.css">
+<style>
+.lang-tabs{display:flex;gap:0;border:1px solid var(--border);border-radius:6px;overflow:hidden;width:fit-content;margin-bottom:1rem}
+.lang-tab{padding:.3rem .875rem;font-size:.8125rem;font-weight:600;border:none;background:transparent;cursor:pointer;color:var(--text-muted);transition:background .15s,color .15s}
+.lang-tab.active{background:var(--primary);color:#fff}
+.lang-tab:not(.active):hover{background:var(--bg-muted,#f1f5f9)}
+</style>
+{% block head_extra %}{% endblock %}
+</head>
+<body>
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <i class="fa-solid fa-book-open" style="font-size:1.1rem;flex-shrink:0"></i>
+      {{ APP_NAME }}
+    </div>
+    <nav class="sidebar-nav">
+      <a href="/admin/" class="nav-item {{ nav_active == 'dashboard' ? 'active' : '' }}">
+        <i class="fa-solid fa-table-cells-large fa-fw"></i>
+        Dashboard
+      </a>
+      <a href="/admin/veranstaltungen/" class="nav-item {{ nav_active == 'veranstaltungen' ? 'active' : '' }}">
+        <i class="fa-solid fa-calendar-days fa-fw"></i>
+        Veranstaltungen
+      </a>
+      <a href="/admin/kuenstler/" class="nav-item {{ nav_active == 'kuenstler' ? 'active' : '' }}">
+        <i class="fa-solid fa-user fa-fw"></i>
+        Künstler
+      </a>
+      <a href="/admin/gruppen/" class="nav-item {{ nav_active == 'gruppen' ? 'active' : '' }}">
+        <i class="fa-solid fa-users fa-fw"></i>
+        Gruppen
+      </a>
+      <a href="/admin/bilder/" class="nav-item {{ nav_active == 'bilder' ? 'active' : '' }}">
+        <i class="fa-regular fa-images fa-fw"></i>
+        Bilder
+      </a>
+      <a href="/admin/meta/" class="nav-item {{ nav_active == 'meta' ? 'active' : '' }}">
+        <i class="fa-solid fa-gear fa-fw"></i>
+        Einstellungen
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="/admin/logout.php" class="nav-item">
+        <i class="fa-solid fa-right-from-bracket fa-fw"></i>
+        Abmelden
+      </a>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <h1 class="page-title">{{ page_title }}</h1>
+    </header>
+    <main class="content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+</div>
+{% block scripts %}{% endblock %}
+</body>
+</html>

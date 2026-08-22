@@ -1,0 +1,103 @@
+.contact-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 4rem;
+  align-items: start;
+}
+
+@media (max-width: 768px) {
+  .contact-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.contact-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.125rem;
+}
+
+.cf-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.cf-label {
+  font-size: 0.875rem;
+  color: var(--mid);
+}
+.cf-label .req {
+  color: var(--gold);
+}
+
+.cf-input,
+.cf-textarea {
+  padding: 0.625rem 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.9375rem;
+  font-family: var(--font-sans);
+  color: var(--dark);
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+}
+.cf-input:focus,
+.cf-textarea:focus {
+  border-color: var(--dark);
+}
+.cf-textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.cf-submit {
+  margin-top: 0.375rem;
+}
+
+.contact-info-card {
+  background: var(--light);
+  border: 1px solid var(--border);
+  padding: 1.75rem;
+  border-radius: var(--radius);
+}
+
+.contact-info-title {
+  font-family: var(--font);
+  font-size: 1.125rem;
+  margin-bottom: 1.25rem;
+  color: var(--black);
+}
+
+.contact-info-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  font-size: 0.9rem;
+  color: var(--mid);
+  margin-bottom: 0.875rem;
+}
+.contact-info-row:last-child {
+  margin-bottom: 0;
+}
+.contact-info-row svg {
+  flex-shrink: 0;
+  margin-top: 0.1em;
+  color: var(--gold);
+}
+
+.formular-download {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.formular-download-title {
+  font-size: 0.8125rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}

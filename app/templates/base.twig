@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% if page_title %}{{ page_title }} – {{ SITE_NAME }}{% else %}{{ SITE_NAME }}{% endif %}</title>
+<meta name="description" content="{{ meta_description ?? t('site.description') }}">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="{{ canonical_url ?? (SITE_URL ~ request_uri) }}">
+
+<meta property="og:type"        content="website">
+<meta property="og:site_name"   content="{{ SITE_NAME }}">
+<meta property="og:title"       content="{{ page_title ? (page_title ~ ' – ' ~ SITE_NAME) : SITE_NAME }}">
+<meta property="og:description" content="{{ meta_description ?? t('site.description') }}">
+<meta property="og:url"         content="{{ canonical_url ?? (SITE_URL ~ request_uri) }}">
+<meta property="og:image"       content="{{ og_image ?? (SITE_URL ~ '/assets/og-default.jpg') }}">
+<meta property="og:locale"      content="{{ t('og.locale') }}">
+
+<meta name="twitter:card"        content="summary_large_image">
+<meta name="twitter:title"       content="{{ page_title ? (page_title ~ ' – ' ~ SITE_NAME) : SITE_NAME }}">
+<meta name="twitter:description" content="{{ meta_description ?? t('site.description') }}">
+<meta name="twitter:image"       content="{{ og_image ?? (SITE_URL ~ '/assets/og-default.jpg') }}">
+
+<link rel="stylesheet" href="/assets/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="/assets/public.css">
+{% block head_extra %}{% endblock %}
+</head>
+<body>
+<div class="pub-wrap">
+<header class="pub-header">
+  <div class="container">
+    <a href="{{ langUrl('/') }}" class="pub-logo">{{ SITE_NAME }}</a>
+    <nav class="pub-nav">
+      <a href="{{ langUrl('/veranstaltungen.php') }}" class="{{ nav_active == 'veranstaltungen' ? 'active' : '' }}">{{ t('nav.events') }}</a>
+      <a href="{{ langUrl('/kuenstler.php') }}" class="{{ nav_active == 'kuenstler' ? 'active' : '' }}">{{ t('nav.artists') }}</a>
+      <a href="{{ langUrl('/kontakt.php') }}" class="{{ nav_active == 'kontakt' ? 'active' : '' }}">{{ t('nav.contact') }}</a>
+      <div class="lang-switch">
+        <a href="/de{{ request_uri_no_lang }}" class="{{ lang == 'de' ? 'active' : '' }}">DE</a>
+        <span>|</span>
+        <a href="/en{{ request_uri_no_lang }}" class="{{ lang == 'en' ? 'active' : '' }}">EN</a>
+      </div>
+    </nav>
+  </div>
+</header>
+<main class="pub-main">
+{% block content %}{% endblock %}
+</main>
+<footer class="pub-footer">
+  <div class="container">
+    <div class="pub-footer-brand">{{ SITE_NAME }}</div>
+    <div class="pub-footer-links">
+      <a href="{{ langUrl('/kontakt.php') }}">{{ t('footer.contact') }}</a>
+      <a href="{{ langUrl('/impressum.php') }}">{{ t('footer.impressum') }}</a>
+    </div>
+  </div>
+</footer>
+</div>
+{% block scripts %}{% endblock %}
+</body>
+</html>

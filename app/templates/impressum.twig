@@ -1,0 +1,22 @@
+{% extends 'base.twig' %}
+
+{% block content %}
+  <section class="detail-header" style="padding:2rem 0 1.75rem">
+    <div class="container">
+      <h1 class="detail-title">{{ t('impressum.title') }}</h1>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top:2rem">
+    <div class="container">
+      {% set impressum_text = (lang == 'en' and meta.impressum_en) ? meta.impressum_en : meta.impressum %}
+      {% if impressum_text %}
+        <div class="detail-description" style="max-width:var(--max-w-text)">
+          {{ impressum_text|raw }}
+        </div>
+      {% else %}
+        <p class="text-muted">{{ t('impressum.empty') }}</p>
+      {% endif %}
+    </div>
+  </section>
+{% endblock %}

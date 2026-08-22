@@ -1,0 +1,146 @@
+{% extends 'base.twig' %}
+
+{% block content %}
+  {% set beschr = (lang == 'en' and t.beschreibung_en) ? t.beschreibung_en : t.beschreibung %}
+  <section class="detail-header">
+    <div class="container">
+      <a href="{{ back_url }}" class="detail-back">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+        {{ back_label }}
+      </a>
+      <div class="detail-type-badge">{{ type_label }}</div>
+      <h1 class="detail-title">{{ t.name }}</h1>
+      {% if t.link %}
+        <a href="{{ t.link }}" target="_blank" rel="noopener"
+           class="pub-btn pub-btn-ghost" style="margin-top:.75rem;width:fit-content">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
+            <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+          </svg>
+          {{ t('participant.visit_website') }}
+        </a>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+
+      {% if beschr %}
+        <div class="detail-description" style="max-width:var(--max-w-text);margin-bottom:2.5rem">
+          {{ beschr|raw }}
+        </div>
+      {% endif %}
+
+      {% if t.typ == 'gruppe' and members %}
+        <div style="margin-bottom:2.5rem">
+          <div class="section-label">{{ t('participant.members') }}</div>
+          <ul class="members-list" style="max-width:480px">
+            {% for m in members %}
+              <li>
+                <a href="{{ langUrl('/teilnehmer.php') }}?id={{ m.id }}{{ vid ? '&vid=' ~ vid : '' }}">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                  </svg>
+                  {{ m.name }}
+                </a>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      {% if attended_events %}
+        <div style="margin-bottom:2.5rem">
+          <div class="section-label">{{ t('participant.events') }}</div>
+          <div class="participant-events">
+            {% for e in attended_events %}
+              {% set e_name = (lang == 'en' and e.name_en) ? e.name_en : e.name %}
+              <a href="{{ langUrl('/veranstaltung.php') }}?id={{ e.id }}" class="participant-event-chip">
+                {{ e_name }}
+                {% if e.erster_tag %}
+                  <span class="participant-event-chip-year">{{ e.erster_tag|date('Y') }}</span>
+                {% endif %}
+              </a>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+
+      {% if meine_programmpunkte %}
+        <div style="margin-bottom:2.5rem">
+          <div class="section-label" style="margin-bottom:.875rem">{{ t('participant.program') }}</div>
+          {% set prev_date = null %}
+          {% set today_tp = "now"|date("Y-m-d") %}
+          {% set now_time_tp = "now"|date("H:i:s") %}
+          {% for pp in meine_programmpunkte %}
+            {% set pp_titel = (lang == 'en' and pp.titel_en) ? pp.titel_en : pp.titel %}
+            {% set pp_beschr = (lang == 'en' and pp.beschreibung_en) ? pp.beschreibung_en : pp.beschreibung %}
+            {% set pp_veranst = (lang == 'en' and pp.veranstaltung_name_en) ? pp.veranstaltung_name_en : pp.veranstaltung_name %}
+            {% set is_past = pp.datum < today_tp or (pp.datum == today_tp and pp.uhrzeit < now_time_tp) %}
+            {% if pp.datum != prev_date %}
+              {% set prev_date = pp.datum %}
+              <div class="tn-prog-day">
+                {{ fmtWeekday(pp.datum) }}, {{ pp.datum|date('d.m.Y') }}
+                <span class="tn-prog-day-event">{{ pp_veranst }}</span>
+              </div>
+            {% endif %}
+            <div class="tn-prog-item{{ is_past ? ' tn-prog-item--past' : '' }}">
+              <div class="tn-prog-time">{{ pp.uhrzeit|slice(0,5) }}{% if lang == 'de' %} Uhr{% endif %}</div>
+              <div class="tn-prog-body">
+                <div class="tn-prog-title">{{ pp_titel|striptags }}</div>
+                {% if pp.ort_name %}
+                  <div class="tn-prog-meta">
+                    <i class="fa-solid fa-location-dot" style="font-size:.75em;opacity:.6"></i>
+                    {{ pp.ort_name }}
+                  </div>
+                {% endif %}
+                {% if pp_beschr %}
+                  <div class="tn-prog-desc">{{ pp_beschr|raw }}</div>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      {% if bilder %}
+        <div class="section-label" style="margin-bottom:.75rem">{{ t('participant.works') }}</div>
+        <div class="detail-image-grid">
+          {% for b in bilder %}
+            <img src="{{ bildUrl(b.dateiname) }}"
+                 alt="{{ b.alt_text ?? b.titel ?? t.name }}"
+                 loading="lazy"
+                 onclick="openLightbox(this.src)">
+          {% endfor %}
+        </div>
+      {% elseif not members %}
+        <p class="text-muted">{{ t('participant.no_works') }}</p>
+      {% endif %}
+
+    </div>
+  </section>
+
+  <div id="lightbox" class="pub-lightbox" style="display:none" onclick="closeLightbox()">
+    <button class="pub-lightbox-close" onclick="closeLightbox()">✕</button>
+    <img id="lightbox-img" src="" alt="">
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openLightbox(src) {
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function closeLightbox() {
+  document.getElementById('lightbox').style.display = 'none';
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+</script>
+{% endblock %}

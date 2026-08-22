@@ -1,0 +1,91 @@
+[
+  {
+    "id": 1,
+    "name": "Artbook 2012",
+    "year": 2012,
+    "img_release_date": "01.07.2012",
+    "timestamp": 1787110096250
+  },
+  {
+    "id": 2,
+    "name": "Artbook 2013",
+    "year": 2013,
+    "img_release_date": "01.07.2013",
+    "timestamp": 1787110096251
+  },
+  {
+    "id": 3,
+    "name": "Artbook 2014",
+    "year": 2014,
+    "img_release_date": "01.07.2014",
+    "timestamp": 1787110096252
+  },
+  {
+    "id": 4,
+    "name": "Artbook 2015",
+    "year": 2015,
+    "img_release_date": "01.07.2015",
+    "timestamp": 1787110096253
+  },
+  {
+    "id": 5,
+    "name": "Artbook 2016",
+    "year": 2016,
+    "img_release_date": "01.07.2016",
+    "timestamp": 1787110096254
+  },
+  {
+    "id": 6,
+    "name": "Artbook 2017",
+    "year": 2017,
+    "img_release_date": "01.07.2017",
+    "timestamp": 1787110096255
+  },
+  {
+    "id": 7,
+    "name": "Artbook 2018",
+    "year": 2018,
+    "img_release_date": "01.07.2018",
+    "timestamp": 1787110096256
+  },
+  {
+    "id": 8,
+    "name": "Artbook 2019",
+    "year": 2019,
+    "img_release_date": "01.07.2019",
+    "timestamp": 1787110096257
+  },
+  {
+    "id": 10,
+    "name": "Artbook 2021",
+    "year": 2021,
+    "img_release_date": "01.07.2021",
+    "timestamp": 1787110096258
+  },
+  {
+    "id": 11,
+    "name": "Artbook 2022",
+    "year": 2022,
+    "img_release_date": "01.07.2022",
+    "timestamp": 1787110096259
+  },
+  {
+    "id": 12,
+    "name": "Artbook 2023",
+    "year": 2023,
+    "img_release_date": "01.07.2023",
+    "timestamp": 1787110096260
+  },
+  {
+    "id": 13,
+    "name": "Artbook 2024",
+    "year": 2024,
+    "img_release_date": "01.07.2024"
+  },
+  {
+    "id": 14,
+    "name": "Artbook 2025",
+    "year": 2025,
+    "img_release_date": "01.07.2025"
+  }
+]

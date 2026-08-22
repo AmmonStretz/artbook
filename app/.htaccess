@@ -1,0 +1,8 @@
+Options -Indexes
+RewriteEngine On
+RewriteRule ^(vendor|src|templates)(/|$) - [F,L]
+RewriteRule ^db\.local\.php$ - [F,L]
+
+# Language prefix: /de/* and /en/* → rewrite internally, preserve lang in env var
+RewriteRule ^(de|en)/(.+)$ /$2 [E=SITE_LANG:$1,QSA,L]
+RewriteRule ^(de|en)/?$ /index.php [E=SITE_LANG:$1,QSA,L]

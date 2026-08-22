@@ -1,0 +1,28 @@
+.hero {
+  background: var(--light);
+  padding: 5rem 0 4rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.hero-inner {
+  max-width: var(--max-w-text);
+}
+
+.hero-title {
+  font-family: var(--font);
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: normal;
+  line-height: 1.2;
+  color: var(--black);
+  margin-bottom: 1.5rem;
+}
+
+.hero-body {
+  font-size: 1.0625rem;
+  color: var(--mid);
+  max-width: 600px;
+  line-height: 1.7;
+}
+.hero-body p + p {
+  margin-top: 0.875rem;
+}

@@ -1,0 +1,37 @@
+{% extends 'base.twig' %}
+
+{% block head_extra %}
+  <link rel="stylesheet" href="/assets/event-preview.css">
+{% endblock %}
+
+{% block content %}
+  {% if active_event and active_event.erster_tag %}
+    <script type="application/ld+json">
+    {{ json_ld|raw }}
+    </script>
+  {% endif %}
+
+  <section class="hero">
+    <div class="container">
+      <div class="hero-inner">
+        <h1 class="hero-title">{{ SITE_NAME }}</h1>
+        {% if lang == 'en' and meta.einladung_en %}
+          <div class="hero-body">{{ meta.einladung_en|raw }}</div>
+        {% elseif meta.einladung %}
+          <div class="hero-body">{{ meta.einladung|raw }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  {% include 'partials/event-preview.twig' %}
+
+  <section class="archive-banner">
+    <div class="container">
+      <div class="section-title">{{ t('home.past_events') }}</div>
+      <div class="section-body">{{ t('home.past_events_desc') }}</div>
+      <a href="{{ langUrl('/archiv.php') }}" class="pub-btn"
+        style="background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.3)">{{ t('home.to_archive') }}</a>
+    </div>
+  </section>
+{% endblock %}
