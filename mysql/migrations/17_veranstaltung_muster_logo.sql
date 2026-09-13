@@ -1,0 +1,6 @@
+USE artbook;
+
+ALTER TABLE veranstaltung
+    DROP COLUMN titelbild,
+    ADD COLUMN muster VARCHAR(100) NULL DEFAULT NULL,
+    ADD COLUMN logo   VARCHAR(100) NULL DEFAULT NULL;
