@@ -1,0 +1,153 @@
+{% extends 'base.twig' %}
+
+{% block content %}
+{% if flash %}
+  <div class="alert alert-{{ flash.type }}">{{ flash.msg }}</div>
+{% endif %}
+
+{# Hidden form for merge action — checkboxes reference it via form="merge-form" #}
+<form id="merge-form" method="get" action="/admin/teilnehmer/merge.php"></form>
+
+{# Floating merge bar — shown via JS when ≥2 boxes are checked #}
+<div id="merge-bar" style="display:none;position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);
+     background:var(--bg-card,#fff);border:1px solid var(--border);border-radius:.5rem;
+     box-shadow:0 4px 16px rgba(0,0,0,.15);padding:.625rem 1rem;
+     display:none;align-items:center;gap:.75rem;z-index:100;white-space:nowrap">
+  <span id="merge-count" style="font-size:.875rem;color:var(--text-muted)"></span>
+  <button type="submit" form="merge-form" class="btn btn-primary btn-sm">
+    <i class="fa-solid fa-code-merge"></i> Zusammenführen
+  </button>
+  <button type="button" id="merge-deselect" class="btn btn-ghost btn-sm">Auswahl aufheben</button>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">
+      Alle Teilnehmer
+      <span style="color:var(--text-muted);font-weight:400;font-size:.875rem">&nbsp;{{ total }}</span>
+    </span>
+    <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+      <form method="get" class="search-form" style="display:flex;gap:.5rem;align-items:center">
+        <input type="search" name="q" value="{{ q }}"
+               placeholder="Suchen …" class="search-input" autocomplete="off">
+        <select name="kat" class="search-input" style="width:auto" onchange="this.form.submit()">
+          <option value="">Alle Kategorien</option>
+          {% for key, label in TEILNEHMER_KATEGORIEN %}
+            <option value="{{ key }}" {{ kat == key ? 'selected' : '' }}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <select name="vid" class="search-input" style="width:auto" onchange="this.form.submit()">
+          <option value="">Alle Veranstaltungen</option>
+          {% for v in veranstaltungen %}
+            <option value="{{ v.id }}" {{ vid == v.id ? 'selected' : '' }}>
+              {{ v.name }}{% if v.erster_tag %} ({{ v.erster_tag|date('Y') }}){% endif %}
+            </option>
+          {% endfor %}
+        </select>
+        {% if q or kat or vid %}
+          <a href="?" class="search-clear" title="Filter zurücksetzen">✕</a>
+        {% endif %}
+      </form>
+      <a href="/admin/teilnehmer/form.php" class="btn btn-primary btn-sm">
+        <i class="fa-solid fa-plus"></i>
+        Neuer Teilnehmer
+      </a>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:2rem"></th>
+          <th>Name</th>
+          <th>Kategorie</th>
+          <th style="text-align:center">Mitglieder</th>
+          <th style="text-align:center">Veranstaltungen</th>
+          <th style="text-align:center">Bilder</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if not rows %}
+          <tr>
+            <td colspan="6" style="text-align:center;color:var(--text-muted);padding:2.5rem 1rem">
+              {{ q or kat ? 'Keine Ergebnisse.' : 'Noch keine Teilnehmer vorhanden.' }}
+            </td>
+          </tr>
+        {% endif %}
+        {% for r in rows %}
+          <tr>
+            <td style="text-align:center">
+              <input type="checkbox" name="ids[]" value="{{ r.id }}"
+                     form="merge-form" class="merge-cb"
+                     style="width:1rem;height:1rem;cursor:pointer">
+            </td>
+            <td class="cell-name">{{ r.name }}</td>
+            <td>
+              <span class="badge badge-type">{{ TEILNEHMER_KATEGORIEN[r.kategorie]|default(r.kategorie) }}</span>
+            </td>
+            <td style="text-align:center;color:var(--text-muted)">
+              {{ r.anzahl_mitglieder > 0 ? r.anzahl_mitglieder : '–' }}
+            </td>
+            <td style="text-align:center;color:var(--text-muted)">
+              {{ r.anzahl_veranstaltungen > 0 ? r.anzahl_veranstaltungen : '–' }}
+            </td>
+            <td style="text-align:center;color:var(--text-muted)">
+              {{ r.anzahl_bilder > 0 ? r.anzahl_bilder : '–' }}
+            </td>
+            <td>
+              <div class="actions">
+                <a href="/admin/teilnehmer/form.php?id={{ r.id }}" class="btn btn-ghost btn-secondary btn-sm">
+                  <i class="fa-regular fa-pen"></i>Bearbeiten</a>
+                <a href="/admin/teilnehmer/form.php?copy={{ r.id }}" class="btn btn-ghost btn-sm">
+                  <i class="fa-regular fa-copy"></i>Kopieren</a>
+                <a href="/admin/teilnehmer/delete.php?id={{ r.id }}" class="btn btn-ghost btn-sm"
+                   style="color:var(--danger)">
+                  <i class="fa-regular fa-close"></i>Löschen</a>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% set pagination_base = '' %}
+  {% if q %}{% set pagination_base = pagination_base ~ 'q=' ~ q|url_encode ~ '&' %}{% endif %}
+  {% if kat %}{% set pagination_base = pagination_base ~ 'kat=' ~ kat ~ '&' %}{% endif %}
+  {% if vid %}{% set pagination_base = pagination_base ~ 'vid=' ~ vid ~ '&' %}{% endif %}
+  {% include 'partials/pagination.twig' with {
+    page: page, pages: pages, total: total, offset: offset, per_page: per_page,
+    pagination_base: pagination_base ? '?' ~ pagination_base : ''
+  } %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const bar       = document.getElementById('merge-bar');
+  const countEl   = document.getElementById('merge-count');
+  const deselect  = document.getElementById('merge-deselect');
+  const cbs       = () => document.querySelectorAll('.merge-cb');
+
+  function update() {
+    const checked = Array.from(cbs()).filter(c => c.checked);
+    if (checked.length >= 2) {
+      countEl.textContent = checked.length + ' ausgewählt';
+      bar.style.display = 'flex';
+    } else {
+      bar.style.display = 'none';
+    }
+  }
+
+  document.addEventListener('change', e => { if (e.target.classList.contains('merge-cb')) update(); });
+
+  deselect.addEventListener('click', () => {
+    cbs().forEach(c => c.checked = false);
+    update();
+  });
+})();
+</script>
+{% endblock %}

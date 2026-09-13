@@ -1,0 +1,74 @@
+{% extends 'base.twig' %}
+
+{% block content %}
+<div style="max-width:680px">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Teilnehmer zusammenführen</span>
+      <a href="/admin/teilnehmer/" class="btn btn-ghost btn-sm">← Zurück</a>
+    </div>
+    <div class="card-body">
+
+      {% if not same_kategorie %}
+        <div class="alert alert-error" style="margin-bottom:1.25rem">
+          Die ausgewählten Teilnehmer haben unterschiedliche Kategorien
+          ({% for k in kategorien %}<strong>{{ TEILNEHMER_KATEGORIEN[k]|default(k) }}</strong>{% if not loop.last %}, {% endif %}{% endfor %})
+          und können nicht zusammengeführt werden.
+          Bitte nur Teilnehmer der gleichen Kategorie auswählen.
+        </div>
+        <a href="/admin/teilnehmer/" class="btn btn-secondary">Zurück zur Liste</a>
+
+      {% else %}
+
+        <p style="margin-bottom:1.5rem;color:var(--text-muted);font-size:.875rem">
+          Wähle aus, welcher Eintrag erhalten bleibt. Alle Relationen der anderen
+          (Veranstaltungen, Programmpunkte, Bilder, Mitgliedschaften) werden auf
+          den verbleibenden Eintrag übertragen — Duplikate werden dabei übersprungen.
+          Die übrigen Einträge werden anschließend unwiderruflich gelöscht.
+        </p>
+
+        <form method="post">
+          {% for t in teilnehmer %}
+            <input type="hidden" name="ids[]" value="{{ t.id }}">
+          {% endfor %}
+
+          <fieldset style="border:none;padding:0;margin:0 0 1.5rem">
+            <legend style="font-weight:600;margin-bottom:.75rem;font-size:.875rem">Welcher Eintrag bleibt erhalten?</legend>
+            <div style="display:flex;flex-direction:column;gap:.5rem">
+              {% for t in teilnehmer %}
+                <label style="display:flex;align-items:center;gap:.625rem;padding:.625rem .875rem;border:1px solid var(--border);border-radius:.375rem;cursor:pointer">
+                  <input type="radio" name="keep_id" value="{{ t.id }}" {{ loop.first ? 'checked' : '' }} required>
+                  <span style="flex:1">
+                    {{ t.name }}
+                    <span class="badge badge-type" style="margin-left:.375rem;font-size:.7rem">
+                      {{ TEILNEHMER_KATEGORIEN[t.kategorie]|default(t.kategorie) }}
+                    </span>
+                  </span>
+                  <span style="color:var(--text-muted);font-size:.8125rem">#{{ t.id }}</span>
+                </label>
+              {% endfor %}
+            </div>
+          </fieldset>
+
+          <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:.375rem;padding:.75rem 1rem;margin-bottom:1.5rem;font-size:.875rem;color:#92400e">
+            <strong>Achtung:</strong>
+            {{ teilnehmer|length - 1 }}
+            {{ (teilnehmer|length - 1) == 1 ? 'Eintrag wird' : 'Einträge werden' }}
+            nach dem Zusammenführen dauerhaft gelöscht.
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary"
+                    onclick="return confirm('Wirklich zusammenführen? Diese Aktion kann nicht rückgängig gemacht werden.')">
+              Zusammenführen
+            </button>
+            <a href="/admin/teilnehmer/" class="btn btn-secondary">Abbrechen</a>
+          </div>
+        </form>
+
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+{% endblock %}
