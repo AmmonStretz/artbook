@@ -1,15 +1,29 @@
 {% extends 'base.twig' %}
 
 {% block content %}
-{% if not bilder %}
-  <p style="color:var(--text-muted);font-size:.9375rem">Noch keine Bilder vorhanden.</p>
-{% else %}
 
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">
   <p style="color:var(--text-muted);font-size:.875rem">
-    {{ total }} {{ total == 1 ? 'Bild' : 'Bilder' }} gesamt
+    {{ total }} {{ total == 1 ? 'Bild' : 'Bilder' }}
   </p>
+  <form method="get" style="display:flex;gap:.5rem;align-items:center">
+    <select name="filter" class="search-input" style="width:auto" onchange="this.form.submit()">
+      <option value="alle" {{ filter == 'alle' ? 'selected' : '' }}>Alle Bilder</option>
+      <option value="teilnehmer" {{ filter == 'teilnehmer' ? 'selected' : '' }}>Teilnehmerbilder</option>
+      <option value="veranstaltung" {{ filter == 'veranstaltung' ? 'selected' : '' }}>Veranstaltungsbilder</option>
+      <option value="unzugeordnet" {{ filter == 'unzugeordnet' ? 'selected' : '' }}>Unzugeordnet</option>
+    </select>
+    {% if filter != 'alle' %}
+      <a href="?" class="search-clear" title="Filter zurücksetzen">✕</a>
+    {% endif %}
+  </form>
 </div>
+
+{% if not bilder %}
+  <p style="color:var(--text-muted);font-size:.9375rem">
+    {{ filter != 'alle' ? 'Keine Bilder in dieser Kategorie.' : 'Noch keine Bilder vorhanden.' }}
+  </p>
+{% else %}
 
 <div class="bild-grid">
   {% for b in bilder %}
@@ -20,7 +34,11 @@
       </div>
       <div class="bild-owner">
         <span class="badge {{ b.badge_cls }}">{{ b.badge_label }}</span>
-        <a href="{{ b.owner_url }}" class="cell-link">{{ b.owner_name }}</a>
+        {% if b.owner_url %}
+          <a href="{{ b.owner_url }}" class="cell-link">{{ b.owner_name }}</a>
+        {% else %}
+          <span style="color:var(--text-muted);font-size:.875rem">{{ b.owner_name }}</span>
+        {% endif %}
       </div>
       {% if b.quelle == 'teilnehmer' %}
       <div class="bild-meta">
@@ -31,8 +49,22 @@
       {% endif %}
       <div class="bild-actions">
         {% if b.quelle == 'teilnehmer' %}
-          <button type="button" class="btn btn-secondary btn-sm" style="flex:1"
-                  onclick="bildSave(this,{{ b.quelle_id }})">Speichern</button>
+          {% if not b.owner_url %}
+            <button type="button" class="btn btn-primary btn-sm" style="flex:1"
+                    onclick="bildReassignOpen({{ b.quelle_id }}, false)">Zuweisen</button>
+            <button type="button" class="btn btn-ghost btn-sm"
+                    onclick="bildSave(this,{{ b.quelle_id }})" title="Metadaten speichern">
+              <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
+            </button>
+          {% else %}
+            <button type="button" class="btn btn-secondary btn-sm" style="flex:1"
+                    onclick="bildSave(this,{{ b.quelle_id }})">Speichern</button>
+            <button type="button" class="btn btn-ghost btn-sm"
+                    onclick="bildReassignOpen({{ b.quelle_id }}, true)"
+                    title="Anderem Teilnehmer zuweisen">
+              <i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true"></i>
+            </button>
+          {% endif %}
         {% endif %}
         <button type="button" class="btn btn-ghost btn-sm" style="color:var(--danger)"
                 onclick="bildDelete(this)" title="Löschen">
@@ -45,10 +77,32 @@
 
 {% include 'partials/pagination.twig' with {
   page: page, pages: pages, total: total, offset: offset, per_page: per_page,
-  pagination_base: ''
+  pagination_base: filter != 'alle' ? '?filter=' ~ filter : ''
 } %}
 
 {% endif %}
+
+<dialog id="bild-reassign-dialog" class="tn-dialog">
+  <div class="tn-dialog-header">
+    <span class="tn-dialog-title">Bild zuweisen</span>
+    <button type="button" class="btn btn-ghost btn-sm"
+            onclick="document.getElementById('bild-reassign-dialog').close()">✕</button>
+  </div>
+  <div class="tn-dialog-body" style="padding:1.25rem;display:flex;flex-direction:column;gap:.75rem;min-width:320px">
+    <input type="search" id="bild-reassign-search" placeholder="Teilnehmer suchen …"
+           class="search-input" autocomplete="off">
+    <select id="bild-reassign-select" class="member-add-select" size="8"
+            style="height:auto;min-height:180px">
+      <option value="">Laden …</option>
+    </select>
+    <p id="bild-reassign-error" style="color:var(--danger);font-size:.8125rem;display:none"></p>
+  </div>
+  <div class="tn-dialog-footer">
+    <button type="button" class="btn btn-ghost btn-sm"
+            onclick="document.getElementById('bild-reassign-dialog').close()">Abbrechen</button>
+    <button type="button" class="btn btn-primary btn-sm" id="bild-reassign-confirm">Zuweisen</button>
+  </div>
+</dialog>
 
 <dialog id="bild-preview-dialog" class="bild-preview-dialog">
   <div class="bild-preview-header">
@@ -91,6 +145,74 @@ async function bildSave(btn, id) {
   } catch { btn.disabled = false; btn.textContent = 'Speichern'; }
 }
 
+(function() {
+  const dialog     = document.getElementById('bild-reassign-dialog');
+  const search     = document.getElementById('bild-reassign-search');
+  const select     = document.getElementById('bild-reassign-select');
+  const confirmBtn = document.getElementById('bild-reassign-confirm');
+  const errEl      = document.getElementById('bild-reassign-error');
+  let currentBildId = null;
+  let allOptions    = [];
+  let loaded        = false;
+
+  dialog.addEventListener('click', e => { if (e.target === dialog) dialog.close(); });
+
+  async function loadTeilnehmer() {
+    if (loaded) return;
+    const data = await (await fetch('/admin/teilnehmer/list_json.php')).json();
+    select.innerHTML = '';
+    allOptions = data.map(t => {
+      const opt = document.createElement('option');
+      opt.value = t.id;
+      opt.textContent = t.name + ' (' + (t.kategorie || '–') + ')';
+      opt.dataset.search = (t.name + ' ' + t.kategorie).toLowerCase();
+      select.appendChild(opt);
+      return opt;
+    });
+    loaded = true;
+  }
+
+  search.addEventListener('input', () => {
+    const term = search.value.toLowerCase();
+    allOptions.forEach(o => { o.hidden = term ? !o.dataset.search.includes(term) : false; });
+    if (select.selectedOptions[0]?.hidden) select.value = '';
+  });
+
+  window.bildReassignOpen = async function(bildId, isReassign) {
+    currentBildId = bildId;
+    errEl.style.display = 'none';
+    search.value = '';
+    dialog.querySelector('.tn-dialog-title').textContent =
+      isReassign ? 'Bild umweisen' : 'Bild zuweisen';
+    await loadTeilnehmer();
+    allOptions.forEach(o => { o.hidden = false; });
+    select.value = '';
+    dialog.showModal();
+    search.focus();
+  };
+
+  confirmBtn.addEventListener('click', async () => {
+    const targetId = parseInt(select.value);
+    if (!targetId) { errEl.textContent = 'Bitte einen Teilnehmer auswählen.'; errEl.style.display = ''; return; }
+    confirmBtn.disabled = true;
+    const fd = new FormData();
+    fd.append('bild_id',   currentBildId);
+    fd.append('target_id', targetId);
+    try {
+      const d = await (await fetch('/admin/bilder/reassign.php', { method: 'POST', body: fd })).json();
+      if (!d.ok) { errEl.textContent = d.error || 'Fehler'; errEl.style.display = ''; confirmBtn.disabled = false; return; }
+      dialog.close();
+      const card = document.querySelector(`.bild-card[data-quelle="teilnehmer"][data-quelle-id="${currentBildId}"]`);
+      if (card) {
+        card.style.transition = 'opacity .2s';
+        card.style.opacity = '0';
+        setTimeout(() => card.remove(), 220);
+      }
+    } catch { errEl.textContent = 'Netzwerkfehler.'; errEl.style.display = ''; }
+    confirmBtn.disabled = false;
+  });
+})();
+
 async function bildDelete(btn) {
   if (!confirm('Dieses Bild unwiderruflich löschen?')) return;
   btn.disabled = true;
@@ -100,9 +222,12 @@ async function bildDelete(btn) {
   const fd     = new FormData();
 
   let url;
-  if (quelle === 'veranstaltung') {
+  if (quelle === 'veranstaltung_muster') {
     fd.append('veranstaltung_id', id);
-    url = '/admin/veranstaltungen/titelbild_delete.php';
+    url = '/admin/veranstaltungen/muster_delete.php';
+  } else if (quelle === 'veranstaltung_logo') {
+    fd.append('veranstaltung_id', id);
+    url = '/admin/veranstaltungen/logo_delete.php';
   } else {
     fd.append('bild_id', id);
     url = '/admin/bilder/delete.php';

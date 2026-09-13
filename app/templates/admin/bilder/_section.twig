@@ -5,23 +5,20 @@
     <span class="card-title">
       Bilder
       <span id="{{ ns }}_count" style="color:var(--text-muted);font-weight:400;font-size:.875rem">
-        &nbsp;{{ cnt }} / {{ IMG_MAX_COUNT }}
+        &nbsp;{{ cnt }}
       </span>
     </span>
-    <label id="{{ ns }}_label" class="btn btn-primary btn-sm"
-           style="cursor:pointer{{ cnt >= IMG_MAX_COUNT ? ';opacity:.45;pointer-events:none' : '' }}">
+    <label id="{{ ns }}_label" class="btn btn-primary btn-sm" style="cursor:pointer">
       <i class="fa-solid fa-upload"></i>
       Bilder hochladen
-      <input type="file" id="{{ ns }}_input" accept=".jpg,.jpeg,.png,.webp" multiple hidden
-             {{ cnt >= IMG_MAX_COUNT ? 'disabled' : '' }}>
+      <input type="file" id="{{ ns }}_input" accept=".jpg,.jpeg,.png,.webp" multiple hidden>
     </label>
   </div>
   <div class="card-body">
     <p class="bild-hint">
       Mindestens {{ IMG_MIN_WIDTH }} px Breite &nbsp;·&nbsp;
       wird auf {{ IMG_MAX_WIDTH }}px / 768px skaliert &nbsp;·&nbsp;
-      JPEG, PNG, WebP &nbsp;·&nbsp;
-      max. {{ IMG_MAX_COUNT }} Bilder
+      JPEG, PNG, WebP
     </p>
     <div id="{{ ns }}_errors"></div>
     <div id="{{ ns }}_grid" class="bild-grid">
@@ -47,6 +44,14 @@
           <div class="bild-actions">
             <button type="button" class="btn btn-secondary btn-sm" style="flex:1"
                     onclick="bildSave(this,{{ b.id }})">Speichern</button>
+            <button type="button" class="btn btn-ghost btn-sm"
+                    onclick="bildReassignOpen({{ b.id }})" title="Anderem Teilnehmer zuweisen">
+              <i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="btn btn-ghost btn-sm"
+                    onclick="bildUnassign(this,{{ b.id }})" title="Zuordnung aufheben">
+              <i class="fa-solid fa-link-slash" aria-hidden="true"></i>
+            </button>
             <button type="button" class="btn btn-ghost btn-sm" style="color:var(--danger)"
                     onclick="bildDelete(this,{{ b.id }})" title="Löschen">
               <i class="fa-solid fa-trash" aria-hidden="true"></i>
@@ -59,6 +64,28 @@
     </div>
   </div>
 </div>
+
+<dialog id="bild-reassign-dialog" class="tn-dialog">
+  <div class="tn-dialog-header">
+    <span class="tn-dialog-title">Bild zuweisen</span>
+    <button type="button" class="btn btn-ghost btn-sm"
+            onclick="document.getElementById('bild-reassign-dialog').close()">✕</button>
+  </div>
+  <div class="tn-dialog-body" style="padding:1.25rem;display:flex;flex-direction:column;gap:.75rem;min-width:320px">
+    <input type="search" id="bild-reassign-search" placeholder="Teilnehmer suchen …"
+           class="search-input" autocomplete="off">
+    <select id="bild-reassign-select" class="member-add-select" size="8"
+            style="height:auto;min-height:180px">
+      <option value="">Laden …</option>
+    </select>
+    <p id="bild-reassign-error" style="color:var(--danger);font-size:.8125rem;display:none"></p>
+  </div>
+  <div class="tn-dialog-footer">
+    <button type="button" class="btn btn-ghost btn-sm"
+            onclick="document.getElementById('bild-reassign-dialog').close()">Abbrechen</button>
+    <button type="button" class="btn btn-primary btn-sm" id="bild-reassign-confirm">Zuweisen</button>
+  </div>
+</dialog>
 
 <dialog id="bild-preview-dialog" class="bild-preview-dialog">
   <div class="bild-preview-header">
@@ -96,6 +123,81 @@ async function bildSave(btn, id) {
     setTimeout(() => { btn.disabled = false; btn.textContent = 'Speichern'; }, 1800);
   } catch { btn.disabled = false; btn.textContent = 'Speichern'; }
 }
+(function() {
+  const dialog    = document.getElementById('bild-reassign-dialog');
+  const search    = document.getElementById('bild-reassign-search');
+  const select    = document.getElementById('bild-reassign-select');
+  const confirmBtn = document.getElementById('bild-reassign-confirm');
+  const errEl     = document.getElementById('bild-reassign-error');
+  let currentBildId = null;
+  let allOptions = [];
+
+  dialog.addEventListener('click', e => { if (e.target === dialog) dialog.close(); });
+
+  let loaded = false;
+  async function loadTeilnehmer() {
+    if (loaded) return;
+    const data = await (await fetch('/admin/teilnehmer/list_json.php')).json();
+    select.innerHTML = '';
+    allOptions = data.map(t => {
+      const opt = document.createElement('option');
+      opt.value = t.id;
+      opt.textContent = t.name + ' (' + (t.kategorie || '–') + ')';
+      opt.dataset.search = (t.name + ' ' + t.kategorie).toLowerCase();
+      select.appendChild(opt);
+      return opt;
+    });
+    loaded = true;
+  }
+
+  search.addEventListener('input', () => {
+    const term = search.value.toLowerCase();
+    allOptions.forEach(o => { o.hidden = term ? !o.dataset.search.includes(term) : false; });
+    if (select.selectedOptions[0]?.hidden) select.value = '';
+  });
+
+  window.bildReassignOpen = async function(bildId) {
+    currentBildId = bildId;
+    errEl.style.display = 'none';
+    search.value = '';
+    await loadTeilnehmer();
+    allOptions.forEach(o => { o.hidden = false; });
+    select.value = '';
+    dialog.showModal();
+    search.focus();
+  };
+
+  confirmBtn.addEventListener('click', async () => {
+    const targetId = parseInt(select.value);
+    if (!targetId) { errEl.textContent = 'Bitte einen Teilnehmer auswählen.'; errEl.style.display = ''; return; }
+    confirmBtn.disabled = true;
+    const fd = new FormData();
+    fd.append('bild_id',   currentBildId);
+    fd.append('target_id', targetId);
+    try {
+      const d = await (await fetch('/admin/bilder/reassign.php', { method: 'POST', body: fd })).json();
+      if (!d.ok) { errEl.textContent = d.error || 'Fehler'; errEl.style.display = ''; confirmBtn.disabled = false; return; }
+      dialog.close();
+      const card = document.querySelector(`.bild-card[data-id="${currentBildId}"]`);
+      if (card) {
+        const grid = card.parentNode;
+        card.style.transition = 'opacity .2s';
+        card.style.opacity = '0';
+        setTimeout(() => {
+          card.remove();
+          if (typeof updateBildCount === 'function') updateBildCount(-1);
+          if (!grid.querySelector('.bild-card')) {
+            const p = document.createElement('p');
+            p.className = 'bild-empty'; p.textContent = 'Noch keine Bilder hochgeladen.';
+            grid.appendChild(p);
+          }
+        }, 220);
+      }
+    } catch { errEl.textContent = 'Netzwerkfehler.'; errEl.style.display = ''; confirmBtn.disabled = false; }
+    confirmBtn.disabled = false;
+  });
+})();
+
 async function bildDelete(btn, id) {
   if (!confirm('Dieses Bild unwiderruflich löschen?')) return;
   btn.disabled = true;
@@ -121,6 +223,31 @@ async function bildDelete(btn, id) {
     } else { btn.disabled = false; }
   } catch { btn.disabled = false; }
 }
+async function bildUnassign(btn, id) {
+  if (!confirm('Nur die Zuordnung zum Teilnehmer aufheben? Das Bild bleibt erhalten.')) return;
+  btn.disabled = true;
+  const fd = new FormData();
+  fd.append('bild_id', id);
+  try {
+    const r = await fetch('/admin/bilder/unassign.php', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.ok) {
+      const card = btn.closest('.bild-card');
+      const grid = card.parentNode;
+      card.style.transition = 'opacity .2s';
+      card.style.opacity = '0';
+      setTimeout(() => {
+        card.remove();
+        if (typeof updateBildCount === 'function') updateBildCount(-1);
+        if (!grid.querySelector('.bild-card')) {
+          const p = document.createElement('p');
+          p.className = 'bild-empty'; p.textContent = 'Noch keine Bilder hochgeladen.';
+          grid.appendChild(p);
+        }
+      }, 220);
+    } else { btn.disabled = false; }
+  } catch { btn.disabled = false; }
+}
 </script>
 
 <script>
@@ -131,20 +258,15 @@ async function bildDelete(btn, id) {
   const errWrap = document.getElementById('{{ ns }}_errors');
   const cntEl   = document.getElementById('{{ ns }}_count');
   const tid     = {{ bild_tid }};
-  const maxCount = {{ IMG_MAX_COUNT }};
-  let   count    = {{ cnt }};
+  let count = {{ cnt }};
 
-  function syncLimit() {
-    cntEl.textContent = ' ' + count + ' / ' + maxCount;
-    const full = count >= maxCount;
-    input.disabled         = full;
-    label.style.opacity    = full ? '.45' : '';
-    label.style.pointerEvents = full ? 'none' : '';
+  function syncCount() {
+    cntEl.textContent = ' ' + count;
   }
 
   window.updateBildCount = function(delta) {
     count += delta;
-    syncLimit();
+    syncCount();
   };
 
   input.addEventListener('change', () => {
@@ -153,10 +275,6 @@ async function bildDelete(btn, id) {
   });
 
   async function upload(file) {
-    if (count >= maxCount) {
-      addErr('Maximale Bildanzahl (' + maxCount + ') erreicht.');
-      return;
-    }
     const fd = new FormData();
     fd.append('teilnehmer_id', tid);
     fd.append('bild', file);
@@ -166,7 +284,7 @@ async function bildDelete(btn, id) {
       if (d.error) { addErr(file.name + ': ' + d.error); return; }
       appendCard(d);
       count++;
-      syncLimit();
+      syncCount();
       const empty = document.getElementById('{{ ns }}_empty');
       if (empty) empty.remove();
     } catch { addErr(file.name + ': Upload fehlgeschlagen'); }
@@ -205,6 +323,9 @@ function bildCardHtml(id, url, titel, alt, datum) {
     </div>
     <div class="bild-actions">
       <button type="button" class="btn btn-secondary btn-sm" style="flex:1" onclick="bildSave(this,${id})">Speichern</button>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="bildUnassign(this,${id})" title="Zuordnung aufheben">
+        <i class="fa-solid fa-link-slash" aria-hidden="true"></i>
+      </button>
       <button type="button" class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="bildDelete(this,${id})" title="Löschen">
         <i class="fa-solid fa-trash" aria-hidden="true"></i>
       </button>

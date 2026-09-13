@@ -8,16 +8,9 @@ header('Content-Type: application/json');
 $tid = (int)($_POST['teilnehmer_id'] ?? 0);
 if (!$tid) { echo json_encode(['error' => 'Fehlende ID']); exit; }
 
-$stmt = db()->prepare("SELECT id FROM teilnehmer WHERE id = ? AND typ IN ('kuenstler','gruppe')");
+$stmt = db()->prepare("SELECT id FROM teilnehmer WHERE id = ?");
 $stmt->execute([$tid]);
 if (!$stmt->fetch()) { echo json_encode(['error' => 'Ungültige ID']); exit; }
-
-$cntStmt = db()->prepare("SELECT COUNT(*) FROM teilnehmer_bild WHERE teilnehmer_id = ?");
-$cntStmt->execute([$tid]);
-if ((int)$cntStmt->fetchColumn() >= IMG_MAX_COUNT) {
-    echo json_encode(['error' => 'Maximal ' . IMG_MAX_COUNT . ' Bilder pro Teilnehmer erlaubt.']);
-    exit;
-}
 
 if (empty($_FILES['bild']) || $_FILES['bild']['error'] !== UPLOAD_ERR_OK) {
     echo json_encode(['error' => 'Upload fehlgeschlagen (Code ' . ($_FILES['bild']['error'] ?? '?') . ')']);
@@ -64,9 +57,9 @@ foreach (IMG_BILD_WIDTHS as $w) {
 imagedestroy($src);
 
 db()->prepare("
-    INSERT INTO teilnehmer_bild (teilnehmer_id, dateiname, dateiname_original, mime_type, groesse_bytes)
-    VALUES (?, ?, ?, 'image/jpeg', ?)
-")->execute([$tid, $filename, $file['name'], $size]);
+    INSERT INTO teilnehmer_bild (teilnehmer_id, dateiname, dateiname_original, mime_type, groesse_bytes, breite, hoehe)
+    VALUES (?, ?, ?, 'image/jpeg', ?, ?, ?)
+")->execute([$tid, $filename, $file['name'], $size, $width, $height]);
 
 echo json_encode([
     'ok'     => true,
