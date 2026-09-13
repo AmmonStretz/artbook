@@ -3,7 +3,6 @@
 {% block head_extra %}
 <link rel="stylesheet" href="/assets/flatpickr/flatpickr.min.css">
 <link rel="stylesheet" href="/assets/tiptap/tiptap.css">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 {% endblock %}
 
 {% block content %}
@@ -97,55 +96,65 @@
       </div>
 
       <div class="form-section">
-        <div class="form-section-title">Adresse & Veranstaltungsort</div>
-        <div class="form-grid">
-          <div class="form-group span-2">
-            <label for="strasse">Straße & Hausnummer</label>
-            <input type="text" id="strasse" name="strasse" value="{{ v.strasse|default('') }}">
-          </div>
-          <div class="form-group">
-            <label for="plz">PLZ</label>
-            <input type="text" id="plz" name="plz" value="{{ v.plz|default('') }}">
-          </div>
-          <div class="form-group">
-            <label for="ort">Ort</label>
-            <input type="text" id="ort" name="ort" value="{{ v.ort|default('') }}">
-          </div>
-          <div class="form-group">
-            <label for="ort_name">Name des Veranstaltungsorts</label>
-            <input type="text" id="ort_name" name="ort_name"
-                   value="{{ v.ort_name|default('') }}"
-                   placeholder="z.B. Messe Frankfurt, Halle 3">
-          </div>
-          <div class="form-group">
-            <label for="ort_url">Link zum Ort <span style="color:var(--text-muted);font-weight:400">(optional)</span></label>
-            <input type="text" id="ort_url" name="ort_url"
-                   value="{{ v.ort_url|default('') }}" placeholder="https://…">
-          </div>
-        </div>
-      </div>
+        <div class="form-section-title">Veranstaltungsort</div>
 
-      <div class="form-section">
-        <div class="form-section-title">Koordinaten</div>
-        <div class="map-wrap" style="margin-bottom:.75rem">
-          <div id="map"></div>
-        </div>
-        <p class="map-hint">
-          <i class="fa-solid fa-circle-info"></i>
-          Auf die Karte klicken, um einen Marker zu setzen – oder Koordinaten direkt eingeben.
-        </p>
-        <div class="form-grid" style="margin-top:.75rem">
-          <div class="form-group">
-            <label for="lat">Breitengrad</label>
-            <input type="number" id="lat" name="lat" step="any" min="-90" max="90"
-                   value="{{ v.lat|default('') }}" placeholder="z.B. 50.1109">
+        <input type="hidden" name="veranstaltungsort_id" id="veranstaltungsort_id"
+               value="{{ v.veranstaltungsort_id|default('') }}">
+
+        {# Ausgewählter Ort — Karte #}
+        <div id="ort-selected" {% if not v.veranstaltungsort_id %}style="display:none"{% endif %}>
+          <div style="border:1px solid var(--border);border-radius:.5rem;padding:.875rem 1rem;
+                      background:var(--bg-muted,#f8fafc);display:flex;justify-content:space-between;
+                      align-items:flex-start;gap:1rem">
+            <div style="min-width:0">
+              <div style="font-weight:600;font-size:.9375rem;margin-bottom:.2rem" id="ort-card-name">
+                {{ current_ort.name|default('') }}
+              </div>
+              <div style="font-size:.875rem;color:var(--text-muted)" id="ort-card-addr">
+                {% if current_ort %}
+                  {% set addr_parts = [] %}
+                  {% if current_ort.strasse %}{% set addr_parts = addr_parts|merge([current_ort.strasse]) %}{% endif %}
+                  {% set city = (current_ort.plz ~ ' ' ~ current_ort.ort)|trim %}
+                  {% if city %}{% set addr_parts = addr_parts|merge([city]) %}{% endif %}
+                  {% if current_ort.land and current_ort.land != 'Deutschland' %}{% set addr_parts = addr_parts|merge([current_ort.land]) %}{% endif %}
+                  {{ addr_parts|join(', ') }}
+                {% endif %}
+              </div>
+              {% if current_ort and current_ort.lat %}
+                <div style="font-size:.8125rem;color:var(--text-muted);margin-top:.25rem" id="ort-card-coords">
+                  {{ current_ort.lat }}, {{ current_ort.lng }}
+                </div>
+              {% else %}
+                <div style="display:none" id="ort-card-coords"></div>
+              {% endif %}
+            </div>
+            <div style="display:flex;flex-direction:column;gap:.375rem;flex-shrink:0;align-items:flex-end">
+              <a href="/admin/orte/form.php?id={{ v.veranstaltungsort_id|default('') }}"
+                 id="ort-edit-link" target="_blank"
+                 class="btn btn-ghost btn-sm" style="white-space:nowrap">
+                Bearbeiten ↗
+              </a>
+              <button type="button" class="btn btn-ghost btn-sm" style="white-space:nowrap"
+                      onclick="clearOrtPicker()">Ort ändern</button>
+            </div>
           </div>
-          <div class="form-group">
-            <label for="lng">Längengrad</label>
-            <input type="number" id="lng" name="lng" step="any" min="-180" max="180"
-                   value="{{ v.lng|default('') }}" placeholder="z.B. 8.6821">
-          </div>
         </div>
+
+        {# Picker — sichtbar wenn kein Ort ausgewählt #}
+        <div id="ort-picker-wrap" {% if v.veranstaltungsort_id %}style="display:none"{% endif %}>
+          <div style="position:relative;margin-bottom:.625rem">
+            <input type="text" id="ort-picker-q" autocomplete="off"
+                   placeholder="Gespeicherten Ort suchen …" style="width:100%">
+            <div id="ort-picker-dropdown" style="display:none;position:absolute;z-index:200;top:100%;left:0;right:0;
+                 background:var(--bg-card,#fff);border:1px solid var(--border);
+                 border-radius:0 0 .375rem .375rem;box-shadow:0 4px 12px rgba(0,0,0,.1);
+                 max-height:280px;overflow-y:auto"></div>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" id="ort-create-open">
+            <i class="fa-solid fa-plus"></i> Neuer Ort anlegen
+          </button>
+        </div>
+
       </div>
 
       <div class="form-section">
@@ -226,6 +235,55 @@
   </div>
 </form>
 
+{# Dialog: Neuer Veranstaltungsort #}
+<dialog id="ort-create-dialog" style="border:none;border-radius:.5rem;padding:0;width:min(520px,95vw);
+        box-shadow:0 8px 32px rgba(0,0,0,.18)">
+  <div style="display:flex;align-items:center;justify-content:space-between;
+              padding:.875rem 1.25rem;border-bottom:1px solid var(--border)">
+    <span style="font-weight:600">Neuer Veranstaltungsort</span>
+    <button type="button" id="ort-create-close" class="btn btn-ghost btn-sm">✕</button>
+  </div>
+  <div style="padding:1.25rem">
+    <div id="ort-create-error" class="alert alert-error" style="display:none;margin-bottom:1rem"></div>
+    <div class="form-grid">
+      <div class="form-group span-2">
+        <label>Name <span class="req">*</span></label>
+        <input type="text" id="ort-create-name" autocomplete="off"
+               placeholder="z.B. Kunstquartier Bethanien">
+      </div>
+      <div class="form-group span-2">
+        <label style="font-weight:400">Straße & Hausnummer</label>
+        <input type="text" id="ort-create-strasse" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label style="font-weight:400">PLZ</label>
+        <input type="text" id="ort-create-plz" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label style="font-weight:400">Ort</label>
+        <input type="text" id="ort-create-ort" autocomplete="off">
+      </div>
+      <div class="form-group span-2">
+        <label style="font-weight:400">Land</label>
+        <input type="text" id="ort-create-land" value="Deutschland" autocomplete="off">
+      </div>
+      <div class="form-group span-2">
+        <label style="font-weight:400;color:var(--text-muted)">Website <span style="font-size:.8125rem">(optional)</span></label>
+        <input type="text" id="ort-create-url" placeholder="https://…" autocomplete="off">
+      </div>
+    </div>
+    <p style="font-size:.8125rem;color:var(--text-muted);margin-top:.75rem">
+      Koordinaten können nach dem Erstellen im
+      <a href="/admin/orte/" target="_blank">Orte-Admin</a> ergänzt werden.
+    </p>
+  </div>
+  <div style="padding:.875rem 1.25rem;border-top:1px solid var(--border);
+              display:flex;justify-content:flex-end;gap:.5rem">
+    <button type="button" class="btn btn-secondary" id="ort-create-cancel">Abbrechen</button>
+    <button type="button" class="btn btn-primary"   id="ort-create-submit">Ort erstellen & auswählen</button>
+  </div>
+</dialog>
+
 {% if is_edit %}
 <div style="max-width:860px;margin-top:1.25rem">
   <div class="card">
@@ -257,46 +315,88 @@
 <div style="max-width:860px;margin-top:1.25rem">
   <div class="card">
     <div class="card-header">
-      <span class="card-title">Titelbild</span>
+      <span class="card-title">Muster</span>
       <label class="btn btn-primary btn-sm" style="cursor:pointer">
         <i class="fa-solid fa-upload"></i>
-        {{ v.titelbild|default('') ? 'Ersetzen' : 'Hochladen' }}
-        <input type="file" id="titelbild-input" accept=".jpg,.jpeg,.png,.webp" hidden>
+        {{ v.muster|default('') ? 'Ersetzen' : 'Hochladen' }}
+        <input type="file" id="muster-input" accept=".jpg,.jpeg,.png,.webp,.svg" hidden>
       </label>
     </div>
     <div class="card-body">
       <p class="bild-hint">
-        Genau {{ IMG_TITELBILD_HEIGHT }} px Höhe, mindestens {{ IMG_TITELBILD_MIN_WIDTH }} px Breite &nbsp;·&nbsp;
-        wird auf 1920×540, 1024×540 und 768×405 zugeschnitten &nbsp;·&nbsp;
-        JPEG, PNG, WebP
+        Mindestens {{ IMG_MUSTER_MIN_WIDTH }} px Breite für Rasterbilder &nbsp;·&nbsp;
+        Wird in 8 WebP-Größen zugeschnitten (Fullpage + Banner) &nbsp;·&nbsp;
+        JPEG, PNG, WebP oder SVG (SVG wird direkt gespeichert)
       </p>
-      <div id="titelbild-error"></div>
-      <div id="titelbild-wrap">
-        {% if v.titelbild|default('') %}
-          {% set tb_stem = v.titelbild|split('.')|first %}
-          <div class="titelbild-preview">
-            <img src="{{ IMG_UPLOAD_URL ~ tb_stem ~ '_1024.jpg' }}"
-                 alt="Titelbild" class="titelbild-img"
-                 onclick="titelbildPreview('{{ (IMG_UPLOAD_URL ~ v.titelbild)|escape('js') }}')">
-            <button type="button" class="btn btn-ghost btn-sm"
-                    style="color:var(--danger);margin-top:.625rem"
-                    onclick="titelbildDelete()">Titelbild entfernen</button>
-          </div>
+      <div id="muster-error"></div>
+      <div id="muster-wrap">
+        {% if v.muster|default('') %}
+          {% if v.muster ends with '.svg' %}
+            <div class="titelbild-preview">
+              <img src="{{ IMG_MUSTER_UPLOAD_URL ~ v.muster }}"
+                   alt="Muster" class="titelbild-img" style="background:#f1f5f9">
+              <button type="button" class="btn btn-ghost btn-sm"
+                      style="color:var(--danger);margin-top:.625rem"
+                      onclick="musterDelete()">Muster entfernen</button>
+            </div>
+          {% else %}
+            {% set m_stem = v.muster|split('.')|first %}
+            <div class="titelbild-preview">
+              <img src="{{ IMG_MUSTER_UPLOAD_URL ~ m_stem ~ '_fp_lg.webp' }}"
+                   alt="Muster" class="titelbild-img"
+                   onclick="musterPreview('{{ (IMG_MUSTER_UPLOAD_URL ~ m_stem ~ '_fp_xl.webp')|escape('js') }}')">
+              <button type="button" class="btn btn-ghost btn-sm"
+                      style="color:var(--danger);margin-top:.625rem"
+                      onclick="musterDelete()">Muster entfernen</button>
+            </div>
+          {% endif %}
         {% else %}
-          <p class="bild-empty">Kein Titelbild hochgeladen.</p>
+          <p class="bild-empty">Kein Muster hochgeladen.</p>
         {% endif %}
       </div>
     </div>
   </div>
 </div>
 
-<dialog id="titelbild-preview-dialog" class="bild-preview-dialog">
+<div style="max-width:860px;margin-top:1.25rem">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Logo</span>
+      <label class="btn btn-primary btn-sm" style="cursor:pointer">
+        <i class="fa-solid fa-upload"></i>
+        {{ v.logo|default('') ? 'Ersetzen' : 'Hochladen' }}
+        <input type="file" id="logo-input" accept=".jpg,.jpeg,.png,.svg" hidden>
+      </label>
+    </div>
+    <div class="card-body">
+      <p class="bild-hint">
+        JPEG, PNG oder SVG &nbsp;·&nbsp; Wird unverändert gespeichert
+      </p>
+      <div id="logo-error"></div>
+      <div id="logo-wrap">
+        {% if v.logo|default('') %}
+          <div class="titelbild-preview">
+            <img src="{{ IMG_LOGO_UPLOAD_URL ~ v.logo }}"
+                 alt="Logo" style="max-height:120px;max-width:240px;object-fit:contain;background:#f1f5f9;padding:.5rem;border-radius:4px">
+            <button type="button" class="btn btn-ghost btn-sm"
+                    style="color:var(--danger);margin-top:.625rem"
+                    onclick="logoDelete()">Logo entfernen</button>
+          </div>
+        {% else %}
+          <p class="bild-empty">Kein Logo hochgeladen.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<dialog id="muster-preview-dialog" class="bild-preview-dialog">
   <div class="bild-preview-header">
     <span style="color:#e2e8f0;font-size:.8125rem">{{ v.name }}</span>
     <button type="button" class="btn btn-ghost btn-sm" style="color:#e2e8f0"
-            onclick="document.getElementById('titelbild-preview-dialog').close()">✕</button>
+            onclick="document.getElementById('muster-preview-dialog').close()">✕</button>
   </div>
-  <img id="titelbild-preview-img" src="" alt=""
+  <img id="muster-preview-img" src="" alt=""
        style="display:block;max-width:88vw;max-height:80vh;object-fit:contain">
 </dialog>
 
@@ -407,7 +507,7 @@
     </div>
     <div id="tn-edit-gruppe-members" style="display:none;margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">
-        <span style="font-size:.875rem;font-weight:600">Künstler</span>
+        <span style="font-size:.875rem;font-weight:600">Aktive Mitglieder (diese Veranstaltung)</span>
         <button type="button" class="btn btn-secondary btn-sm" id="tn-edit-add-kuenstler">
           <i class="fa-solid fa-plus"></i> Hinzufügen
         </button>
@@ -424,7 +524,7 @@
 
 <dialog id="gruppe-k-dialog" class="tn-dialog">
   <div class="tn-dialog-header">
-    <span class="tn-dialog-title">Künstler hinzufügen</span>
+    <span class="tn-dialog-title">Aktives Mitglied hinzufügen</span>
     <button type="button" id="gk-close" class="btn btn-ghost btn-sm">✕</button>
   </div>
   <div class="tn-dialog-toolbar">
@@ -433,6 +533,17 @@
   </div>
   <div id="gk-body" class="tn-dialog-body"></div>
   <div id="gk-footer" class="tn-dialog-footer"></div>
+  <div style="padding:.75rem 1rem;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:.375rem">
+    <div style="font-size:.8125rem;color:var(--text-muted);font-weight:500">Neuen Künstler erstellen &amp; hinzufügen</div>
+    <div style="display:flex;gap:.5rem">
+      <input type="text" id="gk-new-name" placeholder="Name …" autocomplete="off"
+             style="flex:1;min-width:0" class="search-input">
+      <button type="button" id="gk-new-submit" class="btn btn-secondary btn-sm">
+        <i class="fa-solid fa-plus"></i> Erstellen
+      </button>
+    </div>
+    <div id="gk-new-error" style="display:none;color:var(--danger);font-size:.8125rem"></div>
+  </div>
 </dialog>
 
 <dialog id="prog-dialog" class="tn-dialog" style="width:680px">
@@ -503,7 +614,6 @@
 {% block scripts %}
 <script src="/assets/flatpickr/flatpickr.min.js"></script>
 <script src="/assets/flatpickr/l10n/de.js"></script>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script type="module">
 import { mkEditor, edHTML } from '/assets/tiptap/init.js';
 
@@ -641,49 +751,6 @@ document.getElementById('main-form').addEventListener('submit', async (e) => {
   }
 });
 
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconUrl:       'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-});
-
-const initLat = parseFloat(document.getElementById('lat').value);
-const initLng = parseFloat(document.getElementById('lng').value);
-const hasCoords = !isNaN(initLat) && !isNaN(initLng);
-
-const map = L.map('map').setView(
-  hasCoords ? [initLat, initLng] : [51.1657, 10.4515],
-  hasCoords ? 14 : 6
-);
-
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-  maxZoom: 19
-}).addTo(map);
-
-let marker = hasCoords ? L.marker([initLat, initLng]).addTo(map) : null;
-
-function placeMarker(lat, lng) {
-  const pos = [+lat.toFixed(6), +lng.toFixed(6)];
-  marker ? marker.setLatLng(pos) : (marker = L.marker(pos).addTo(map));
-  document.getElementById('lat').value = pos[0];
-  document.getElementById('lng').value = pos[1];
-}
-
-map.on('click', e => placeMarker(e.latlng.lat, e.latlng.lng));
-
-function syncMapFromInputs() {
-  const lat = parseFloat(document.getElementById('lat').value);
-  const lng = parseFloat(document.getElementById('lng').value);
-  if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-    placeMarker(lat, lng);
-    map.setView([lat, lng], map.getZoom() < 10 ? 14 : map.getZoom());
-  }
-}
-
-document.getElementById('lat').addEventListener('change', syncMapFromInputs);
-document.getElementById('lng').addEventListener('change', syncMapFromInputs);
 </script>
 
 {% if is_edit %}
@@ -767,8 +834,8 @@ function renderTn(data) {
   }
 
   body.innerHTML = data.rows.map(r => {
-    const bc = r.typ === 'kuenstler' ? 'badge-kuenstler' : 'badge-type';
-    const bl = r.typ === 'kuenstler' ? 'Künstler' : 'Gruppe';
+    const bc = r.kategorie === 'kuenstler' ? 'badge-kuenstler' : 'badge-type';
+    const bl = r.kategorie === 'kuenstler' ? 'Künstler' : 'Gruppe';
     return `<div class="tn-row" data-id="${r.id}">
       <span class="badge ${bc}">${bl}</span>
       <span class="tn-row-name">${escHtml(r.name)}</span>
@@ -861,53 +928,90 @@ document.getElementById('tn-create-submit').addEventListener('click', async () =
   }
 });
 
-const titelbildVid   = {{ id }};
-const titelbildInput = document.getElementById('titelbild-input');
+const bildVid = {{ id }};
 
-document.getElementById('titelbild-preview-dialog').addEventListener('click', function(e) {
+document.getElementById('muster-preview-dialog').addEventListener('click', function(e) {
   if (e.target === this) this.close();
 });
 
-function titelbildPreview(url) {
-  document.getElementById('titelbild-preview-img').src = url;
-  document.getElementById('titelbild-preview-dialog').showModal();
+function musterPreview(url) {
+  document.getElementById('muster-preview-img').src = url;
+  document.getElementById('muster-preview-dialog').showModal();
 }
 
-titelbildInput.addEventListener('change', async () => {
-  const file = titelbildInput.files[0];
+document.getElementById('muster-input').addEventListener('change', async function() {
+  const file = this.files[0];
   if (!file) return;
-  titelbildInput.value = '';
+  this.value = '';
   const fd = new FormData();
-  fd.append('veranstaltung_id', titelbildVid);
+  fd.append('veranstaltung_id', bildVid);
   fd.append('bild', file);
-  const errEl = document.getElementById('titelbild-error');
+  const errEl = document.getElementById('muster-error');
   errEl.innerHTML = '';
   try {
-    const r = await fetch('/admin/veranstaltungen/titelbild_upload.php', { method: 'POST', body: fd });
+    const r = await fetch('/admin/veranstaltungen/muster_upload.php', { method: 'POST', body: fd });
     const d = await r.json();
     if (d.error) { errEl.innerHTML = `<p class="bild-error">${d.error}</p>`; return; }
-    document.getElementById('titelbild-wrap').innerHTML =
+    document.getElementById('muster-wrap').innerHTML = d.is_svg
+      ? `<div class="titelbild-preview">
+          <img src="${d.url}" alt="Muster" class="titelbild-img" style="background:#f1f5f9">
+          <button type="button" class="btn btn-ghost btn-sm"
+                  style="color:var(--danger);margin-top:.625rem"
+                  onclick="musterDelete()">Muster entfernen</button>
+        </div>`
+      : `<div class="titelbild-preview">
+          <img src="${d.url}" alt="Muster" class="titelbild-img"
+               onclick="musterPreview('${d.url}')">
+          <button type="button" class="btn btn-ghost btn-sm"
+                  style="color:var(--danger);margin-top:.625rem"
+                  onclick="musterDelete()">Muster entfernen</button>
+        </div>`;
+  } catch { errEl.innerHTML = '<p class="bild-error">Upload fehlgeschlagen</p>'; }
+});
+
+async function musterDelete() {
+  if (!confirm('Muster unwiderruflich entfernen?')) return;
+  const fd = new FormData();
+  fd.append('veranstaltung_id', bildVid);
+  try {
+    const r = await fetch('/admin/veranstaltungen/muster_delete.php', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.ok) document.getElementById('muster-wrap').innerHTML = '<p class="bild-empty">Kein Muster hochgeladen.</p>';
+  } catch {}
+}
+
+document.getElementById('logo-input').addEventListener('change', async function() {
+  const file = this.files[0];
+  if (!file) return;
+  this.value = '';
+  const fd = new FormData();
+  fd.append('veranstaltung_id', bildVid);
+  fd.append('bild', file);
+  const errEl = document.getElementById('logo-error');
+  errEl.innerHTML = '';
+  try {
+    const r = await fetch('/admin/veranstaltungen/logo_upload.php', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.error) { errEl.innerHTML = `<p class="bild-error">${d.error}</p>`; return; }
+    document.getElementById('logo-wrap').innerHTML =
       `<div class="titelbild-preview">
-        <img src="${d.url}" alt="Titelbild" class="titelbild-img"
-             onclick="titelbildPreview('${d.url_full}')">
+        <img src="${d.url}" alt="Logo"
+             style="max-height:120px;max-width:240px;object-fit:contain;background:#f1f5f9;padding:.5rem;border-radius:4px">
         <button type="button" class="btn btn-ghost btn-sm"
                 style="color:var(--danger);margin-top:.625rem"
-                onclick="titelbildDelete()">Titelbild entfernen</button>
+                onclick="logoDelete()">Logo entfernen</button>
       </div>`;
   } catch { errEl.innerHTML = '<p class="bild-error">Upload fehlgeschlagen</p>'; }
 });
 
-async function titelbildDelete() {
-  if (!confirm('Titelbild unwiderruflich entfernen?')) return;
+async function logoDelete() {
+  if (!confirm('Logo unwiderruflich entfernen?')) return;
   const fd = new FormData();
-  fd.append('veranstaltung_id', titelbildVid);
+  fd.append('veranstaltung_id', bildVid);
   try {
-    const r = await fetch('/admin/veranstaltungen/titelbild_delete.php', { method: 'POST', body: fd });
+    const r = await fetch('/admin/veranstaltungen/logo_delete.php', { method: 'POST', body: fd });
     const d = await r.json();
-    if (d.ok) {
-      document.getElementById('titelbild-wrap').innerHTML =
-        '<p class="bild-empty">Kein Titelbild hochgeladen.</p>';
-    }
+    if (d.ok) document.getElementById('logo-wrap').innerHTML = '<p class="bild-empty">Kein Logo hochgeladen.</p>';
   } catch {}
 }
 
@@ -973,11 +1077,11 @@ function renderParticipants(data) {
   }
 
   wrap.innerHTML = '<ul class="teilnehmer-list">' + data.rows.map(p => {
-    const editUrl  = p.typ === 'kuenstler'
+    const editUrl  = p.kategorie === 'kuenstler'
       ? `/admin/kuenstler/form.php?id=${p.id}`
       : `/admin/gruppen/form.php?id=${p.id}`;
-    const bc = p.typ === 'kuenstler' ? 'badge-kuenstler' : 'badge-type';
-    const bl = p.typ === 'kuenstler' ? 'Künstler' : 'Gruppe';
+    const bc = p.kategorie === 'kuenstler' ? 'badge-kuenstler' : 'badge-type';
+    const bl = p.kategorie === 'kuenstler' ? 'Künstler' : 'Gruppe';
     return `<li class="teilnehmer-item">
       <div class="teilnehmer-row">
         <span class="badge ${bc}">${bl}</span>
@@ -1087,13 +1191,13 @@ async function openTnEditDialog(tid) {
     if (!d.ok) return;
     const t = d.teilnehmer;
     document.getElementById('tn-edit-title').textContent =
-      (t.typ === 'kuenstler' ? 'Künstler' : 'Gruppe') + ' bearbeiten';
+      (t.kategorie === 'kuenstler' ? 'Künstler' : 'Gruppe') + ' bearbeiten';
     document.getElementById('tn-edit-name').value = t.name || '';
     document.getElementById('tn-edit-link').value = t.link || '';
     const membersEl = document.getElementById('tn-edit-gruppe-members');
-    if (t.typ === 'gruppe') {
+    if (t.kategorie !== 'kuenstler') {
       document.getElementById('tn-edit-gruppe-typ-wrap').style.display = '';
-      document.getElementById('tn-edit-gruppe-typ').value = t.gruppe_typ || '';
+      document.getElementById('tn-edit-gruppe-typ').value = t.kategorie || '';
       membersEl.style.display = '';
       currentGruppeId = t.id;
       gmPage = 1;
@@ -1150,7 +1254,7 @@ async function loadGruppeMitglieder(page) {
   document.getElementById('tn-edit-mitglieder-list').innerHTML = '<p class="member-empty">Laden …</p>';
   document.getElementById('tn-edit-mitglieder-pag').innerHTML  = '';
   try {
-    const r = await fetch(`/admin/veranstaltungen/gruppe_members_ajax.php?gruppe_id=${currentGruppeId}&mode=members&page=${gmPage}`);
+    const r = await fetch(`/admin/veranstaltungen/gruppe_event_members_ajax.php?gruppe_id=${currentGruppeId}&veranstaltung_id=${tnVid}&mode=members&page=${gmPage}`);
     renderGruppeMitglieder(await r.json());
   } catch {
     document.getElementById('tn-edit-mitglieder-list').innerHTML = '<p class="member-empty">Fehler beim Laden.</p>';
@@ -1162,7 +1266,7 @@ function renderGruppeMitglieder(data) {
   const pagEl  = document.getElementById('tn-edit-mitglieder-pag');
 
   if (!data.rows?.length) {
-    listEl.innerHTML = '<p class="member-empty">Noch keine Künstler zugeordnet.</p>';
+    listEl.innerHTML = '<p class="member-empty">Noch keine aktiven Mitglieder für diese Veranstaltung.</p>';
     pagEl.innerHTML  = '';
     return;
   }
@@ -1196,11 +1300,12 @@ function renderGruppeMitglieder(data) {
 async function removeKuenstlerFromGruppe(kid) {
   if (!currentGruppeId) return;
   const fd = new FormData();
-  fd.append('gruppe_id',    currentGruppeId);
-  fd.append('kuenstler_id', kid);
-  fd.append('action',       'remove');
+  fd.append('gruppe_id',       currentGruppeId);
+  fd.append('veranstaltung_id', tnVid);
+  fd.append('mitglied_id',     kid);
+  fd.append('action',          'remove');
   try {
-    const r = await fetch('/admin/veranstaltungen/gruppe_members_ajax.php', { method: 'POST', body: fd });
+    const r = await fetch('/admin/veranstaltungen/gruppe_event_members_ajax.php', { method: 'POST', body: fd });
     const d = await r.json();
     if (d.ok) loadGruppeMitglieder();
   } catch {}
@@ -1228,7 +1333,7 @@ async function loadGruppeAvailable() {
   document.getElementById('gk-footer').innerHTML = '';
   try {
     const r = await fetch(
-      `/admin/veranstaltungen/gruppe_members_ajax.php?gruppe_id=${currentGruppeId}&mode=available&page=${gkPage}&q=${encodeURIComponent(q)}`
+      `/admin/veranstaltungen/gruppe_event_members_ajax.php?gruppe_id=${currentGruppeId}&veranstaltung_id=${tnVid}&mode=available&page=${gkPage}&q=${encodeURIComponent(q)}`
     );
     renderGruppeAvailable(await r.json());
   } catch {
@@ -1268,15 +1373,66 @@ function renderGruppeAvailable(data) {
 
 function gkGo(page) { gkPage = page; loadGruppeAvailable(); }
 
+document.getElementById('gk-new-submit').addEventListener('click', async () => {
+  const name  = document.getElementById('gk-new-name').value.trim();
+  const errEl = document.getElementById('gk-new-error');
+  errEl.style.display = 'none';
+  if (!name) return;
+  const btn = document.getElementById('gk-new-submit');
+  btn.disabled = true;
+  try {
+    // Create the artist
+    const fd1 = new FormData();
+    fd1.append('name', name);
+    fd1.append('kategorie', 'kuenstler');
+    fd1.append('veranstaltung_id', tnVid);
+    const d1 = await (await fetch('/admin/veranstaltungen/teilnehmer_create_ajax.php', { method: 'POST', body: fd1 })).json();
+    if (!d1.ok) { errEl.textContent = d1.error || 'Fehler beim Erstellen.'; errEl.style.display = ''; return; }
+
+    const newId = d1.id;
+
+    // Add to group's global membership
+    const fd2 = new FormData();
+    fd2.append('gruppe_id', currentGruppeId);
+    fd2.append('kuenstler_id', newId);
+    fd2.append('action', 'add');
+    await fetch('/admin/veranstaltungen/gruppe_members_ajax.php', { method: 'POST', body: fd2 });
+
+    // Add to event-specific active members
+    const fd3 = new FormData();
+    fd3.append('gruppe_id', currentGruppeId);
+    fd3.append('veranstaltung_id', tnVid);
+    fd3.append('mitglied_id', newId);
+    fd3.append('action', 'add');
+    const d3 = await (await fetch('/admin/veranstaltungen/gruppe_event_members_ajax.php', { method: 'POST', body: fd3 })).json();
+
+    if (d3.ok) {
+      gkAdded++;
+      document.getElementById('gk-new-name').value = '';
+      loadGruppeMitglieder(1);
+    }
+  } catch {
+    errEl.textContent = 'Fehler beim Erstellen.';
+    errEl.style.display = '';
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.getElementById('gk-new-name').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('gk-new-submit').click();
+});
+
 async function addKuenstlerToGruppe(kid, btn) {
   if (!currentGruppeId) return;
   btn.disabled = true;
   const fd = new FormData();
-  fd.append('gruppe_id',    currentGruppeId);
-  fd.append('kuenstler_id', kid);
-  fd.append('action',       'add');
+  fd.append('gruppe_id',        currentGruppeId);
+  fd.append('veranstaltung_id', tnVid);
+  fd.append('mitglied_id',      kid);
+  fd.append('action',           'add');
   try {
-    const r = await fetch('/admin/veranstaltungen/gruppe_members_ajax.php', { method: 'POST', body: fd });
+    const r = await fetch('/admin/veranstaltungen/gruppe_event_members_ajax.php', { method: 'POST', body: fd });
     const d = await r.json();
     if (d.ok) {
       gkAdded++;
@@ -1433,24 +1589,26 @@ document.getElementById('prog-dialog-submit').addEventListener('click', async ()
   const errEl = document.getElementById('prog-dialog-error');
   errEl.style.display = 'none';
 
-  const tt = window._tt;
-  const fd = new FormData();
-  fd.append('veranstaltung_id', partVid);
-  fd.append('id',          document.getElementById('prog-id').value || '');
-  fd.append('datum',       document.getElementById('prog-datum').value);
-  fd.append('uhrzeit',     document.getElementById('prog-uhrzeit').value);
-  fd.append('titel',          tt.edHTML(tt.progTitel));
-  fd.append('titel_en',       tt.edHTML(tt.progTitelEN));
-  fd.append('beschreibung',   tt.edHTML(tt.progBeschr));
-  fd.append('beschreibung_en', tt.edHTML(tt.progBeschrEN));
-  fd.append('ort_name',    document.getElementById('prog-ort-name').value);
-  fd.append('ort_name_en', document.getElementById('prog-ort-name-en').value);
-  progSelectedTns.forEach((name, id) => fd.append('teilnehmer[]', id));
-
   const btn = document.getElementById('prog-dialog-submit');
   const origText = btn.textContent;
   btn.disabled = true; btn.textContent = 'Speichern …';
+
   try {
+    const tt = window._tt;
+    if (!tt || !tt.progTitel) throw new Error('Editor nicht initialisiert. Bitte Seite neu laden.');
+    const fd = new FormData();
+    fd.append('veranstaltung_id', partVid);
+    fd.append('id',          document.getElementById('prog-id').value || '');
+    fd.append('datum',       document.getElementById('prog-datum').value);
+    fd.append('uhrzeit',     document.getElementById('prog-uhrzeit').value);
+    fd.append('titel',          tt.edHTML(tt.progTitel));
+    fd.append('titel_en',       tt.edHTML(tt.progTitelEN));
+    fd.append('beschreibung',   tt.edHTML(tt.progBeschr));
+    fd.append('beschreibung_en', tt.edHTML(tt.progBeschrEN));
+    fd.append('ort_name',    document.getElementById('prog-ort-name').value);
+    fd.append('ort_name_en', document.getElementById('prog-ort-name-en').value);
+    progSelectedTns.forEach((name, id) => fd.append('teilnehmer[]', id));
+
     const r = await fetch('/admin/veranstaltungen/programm_ajax.php', { method: 'POST', body: fd });
     const d = await r.json();
     if (d.ok) { progDialog.close(); refreshProgTile(d.datum); }
@@ -1458,7 +1616,10 @@ document.getElementById('prog-dialog-submit').addEventListener('click', async ()
       const msg = d.errors ? d.errors.join(' ') : (d.error || 'Fehler.');
       errEl.textContent = msg; errEl.style.display = '';
     }
-  } catch { errEl.textContent = 'Fehler beim Speichern.'; errEl.style.display = ''; }
+  } catch (err) {
+    errEl.textContent = err.message || 'Fehler beim Speichern.';
+    errEl.style.display = '';
+  }
   finally { btn.disabled = false; btn.textContent = origText; }
 });
 
@@ -1510,4 +1671,131 @@ function stripTags(html) {
 }
 </script>
 {% endif %}
+
+<script>
+(function () {
+  const qInput     = document.getElementById('ort-picker-q');
+  const idInput    = document.getElementById('veranstaltungsort_id');
+  const dropdown   = document.getElementById('ort-picker-dropdown');
+  const pickerWrap = document.getElementById('ort-picker-wrap');
+  const selectedEl = document.getElementById('ort-selected');
+  const editLink   = document.getElementById('ort-edit-link');
+  let timer = null;
+
+  function buildAddr(o) {
+    const city  = [o.plz, o.ort].filter(Boolean).join(' ');
+    const parts = [o.strasse, city, (o.land && o.land !== 'Deutschland') ? o.land : ''].filter(Boolean);
+    return parts.join(', ');
+  }
+
+  function setOrt(o) {
+    idInput.value = o.id;
+    document.getElementById('ort-card-name').textContent   = o.name;
+    document.getElementById('ort-card-addr').textContent   = buildAddr(o);
+    document.getElementById('ort-card-coords').textContent = (o.lat && o.lng) ? o.lat + ', ' + o.lng : '';
+    editLink.href = '/admin/orte/form.php?id=' + o.id;
+    pickerWrap.style.display = 'none';
+    selectedEl.style.display = '';
+    dropdown.style.display   = 'none';
+  }
+
+  window.clearOrtPicker = function () {
+    idInput.value = '';
+    qInput.value  = '';
+    pickerWrap.style.display = '';
+    selectedEl.style.display = 'none';
+  };
+
+  async function loadDropdown() {
+    const q = qInput.value.trim();
+    try {
+      const r    = await fetch('/admin/orte/search_ajax.php?q=' + encodeURIComponent(q));
+      const data = await r.json();
+      if (!data.ok || !data.rows.length) {
+        dropdown.innerHTML = '<div style="padding:.625rem 1rem;color:var(--text-muted);font-size:.875rem">Keine Orte gefunden.</div>';
+      } else {
+        dropdown.innerHTML = data.rows.map(o => {
+          const addr = buildAddr(o);
+          return `<div class="ort-picker-item" data-id="${o.id}"
+            style="padding:.5rem 1rem;cursor:pointer;font-size:.875rem;border-bottom:1px solid var(--border,#e5e7eb)">
+            <div style="font-weight:600">${o.name}</div>
+            ${addr ? `<div style="color:var(--text-muted)">${addr}</div>` : ''}
+          </div>`;
+        }).join('');
+        dropdown.querySelectorAll('.ort-picker-item').forEach(el => {
+          el.addEventListener('mouseover', () => el.style.background = 'var(--bg-muted,#f1f5f9)');
+          el.addEventListener('mouseout',  () => el.style.background = '');
+          el.addEventListener('mousedown', e => {
+            e.preventDefault();
+            const found = data.rows.find(o => o.id == el.dataset.id);
+            if (found) setOrt(found);
+          });
+        });
+      }
+      dropdown.style.display = 'block';
+    } catch {}
+  }
+
+  qInput.addEventListener('focus', loadDropdown);
+  qInput.addEventListener('input', () => {
+    clearTimeout(timer);
+    timer = setTimeout(loadDropdown, 220);
+  });
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#ort-picker-wrap')) dropdown.style.display = 'none';
+  });
+
+  // Dialog: Neuer Ort anlegen
+  const dialog    = document.getElementById('ort-create-dialog');
+  const openBtn   = document.getElementById('ort-create-open');
+  const closeBtn  = document.getElementById('ort-create-close');
+  const cancelBtn = document.getElementById('ort-create-cancel');
+  const submitBtn = document.getElementById('ort-create-submit');
+  const errorEl   = document.getElementById('ort-create-error');
+
+  function resetDialog() {
+    ['ort-create-name','ort-create-strasse','ort-create-plz','ort-create-ort','ort-create-url']
+      .forEach(id => document.getElementById(id).value = '');
+    document.getElementById('ort-create-land').value = 'Deutschland';
+    errorEl.style.display = 'none';
+  }
+
+  openBtn.addEventListener('click',   () => { resetDialog(); dialog.showModal(); });
+  closeBtn.addEventListener('click',  () => dialog.close());
+  cancelBtn.addEventListener('click', () => dialog.close());
+
+  submitBtn.addEventListener('click', async () => {
+    const name = document.getElementById('ort-create-name').value.trim();
+    if (!name) {
+      errorEl.textContent   = 'Name ist ein Pflichtfeld.';
+      errorEl.style.display = 'block';
+      return;
+    }
+    submitBtn.disabled = true;
+    try {
+      const fd = new FormData();
+      fd.append('name',    name);
+      fd.append('strasse', document.getElementById('ort-create-strasse').value.trim());
+      fd.append('plz',     document.getElementById('ort-create-plz').value.trim());
+      fd.append('ort',     document.getElementById('ort-create-ort').value.trim());
+      fd.append('land',    document.getElementById('ort-create-land').value.trim() || 'Deutschland');
+      fd.append('ort_url', document.getElementById('ort-create-url').value.trim());
+      const r    = await fetch('/admin/orte/create_ajax.php', { method: 'POST', body: fd });
+      const data = await r.json();
+      if (data.ok) {
+        dialog.close();
+        setOrt(data.ort);
+      } else {
+        errorEl.textContent   = data.error || 'Fehler beim Erstellen.';
+        errorEl.style.display = 'block';
+      }
+    } catch {
+      errorEl.textContent   = 'Netzwerkfehler.';
+      errorEl.style.display = 'block';
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+})();
+</script>
 {% endblock %}

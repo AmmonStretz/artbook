@@ -15,7 +15,8 @@ $v = [
     'strasse' => '', 'plz' => '', 'ort' => '',
     'ort_name' => '', 'ort_url' => '',
     'lat' => '', 'lng' => '',
-    'titelbild' => '',
+    'muster' => '', 'logo' => '',
+    'veranstaltungsort_id' => '',
 ];
 $tage = [['datum' => '', 'startzeit' => '', 'endzeit' => '']];
 $fetched_name = '';
@@ -74,16 +75,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $v['beschreibung_en']     = $_POST['beschreibung_en']     ?? '';
     $v['kurzbeschreibung']    = $_POST['kurzbeschreibung']    ?? '';
     $v['kurzbeschreibung_en'] = $_POST['kurzbeschreibung_en'] ?? '';
-    $v['sichtbar']            = isset($_POST['sichtbar'])            ? 1 : 0;
-    $v['programm_sichtbar']   = isset($_POST['programm_sichtbar'])   ? 1 : 0;
-    $v['teilnehmer_sichtbar'] = isset($_POST['teilnehmer_sichtbar']) ? 1 : 0;
-    $v['strasse']   = trim($_POST['strasse']   ?? '');
-    $v['plz']       = trim($_POST['plz']       ?? '');
-    $v['ort']       = trim($_POST['ort']        ?? '');
-    $v['ort_name']  = trim($_POST['ort_name']  ?? '');
-    $v['ort_url']   = trim($_POST['ort_url']   ?? '');
-    $v['lat']       = trim($_POST['lat']       ?? '');
-    $v['lng']       = trim($_POST['lng']       ?? '');
+    $v['sichtbar']             = isset($_POST['sichtbar'])            ? 1 : 0;
+    $v['programm_sichtbar']    = isset($_POST['programm_sichtbar'])   ? 1 : 0;
+    $v['teilnehmer_sichtbar']  = isset($_POST['teilnehmer_sichtbar']) ? 1 : 0;
+    $v['veranstaltungsort_id'] = (int)($_POST['veranstaltungsort_id'] ?? 0) ?: null;
 
     $tage = [];
     foreach ($_POST['tag_datum'] ?? [] as $i => $datum) {
@@ -102,15 +97,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($t['datum'] && (!$t['startzeit'] || !$t['endzeit']))
             $errors[] = 'Tag ' . ($i + 1) . ': Bitte Start- und Endzeit angeben.';
     }
-    if ($v['lat'] !== '' && ((float)$v['lat'] < -90 || (float)$v['lat'] > 90))
-        $errors[] = 'Breitengrad muss zwischen −90 und 90 liegen.';
-    if ($v['lng'] !== '' && ((float)$v['lng'] < -180 || (float)$v['lng'] > 180))
-        $errors[] = 'Längengrad muss zwischen −180 und 180 liegen.';
-
     if (!$errors) {
-        $lat = $v['lat'] !== '' ? (float)$v['lat'] : null;
-        $lng = $v['lng'] !== '' ? (float)$v['lng'] : null;
         $pdo = db();
+
+        $ort_fields = ['strasse' => null, 'plz' => null, 'ort' => null,
+                       'ort_name' => null, 'ort_url' => null, 'lat' => null, 'lng' => null];
+        if ($v['veranstaltungsort_id']) {
+            $os = $pdo->prepare('SELECT * FROM veranstaltungsort WHERE id = ?');
+            $os->execute([$v['veranstaltungsort_id']]);
+            $the_ort = $os->fetch();
+            if ($the_ort) {
+                $ort_fields['strasse']  = $the_ort['strasse'] ?: null;
+                $ort_fields['plz']      = $the_ort['plz'] ?: null;
+                $ort_fields['ort']      = $the_ort['ort'] ?: null;
+                $ort_fields['ort_name'] = $the_ort['name'] ?: null;
+                $ort_fields['ort_url']  = $the_ort['ort_url'] ?: null;
+                $ort_fields['lat']      = $the_ort['lat'];
+                $ort_fields['lng']      = $the_ort['lng'];
+            }
+        }
+        $lat = $ort_fields['lat'];
+        $lng = $ort_fields['lng'];
 
         if ($is_edit) {
             $pdo->prepare("
@@ -119,37 +126,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                        beschreibung=?, beschreibung_en=?,
                        kurzbeschreibung=?, kurzbeschreibung_en=?,
                        sichtbar=?, programm_sichtbar=?, teilnehmer_sichtbar=?,
-                       strasse=?, plz=?, ort=?, ort_name=?, ort_url=?, lat=?, lng=?
+                       strasse=?, plz=?, ort=?, ort_name=?, ort_url=?, lat=?, lng=?,
+                       veranstaltungsort_id=?
                  WHERE id=?
             ")->execute([
                 $v['name'], $v['name_en'] ?: null,
                 $v['beschreibung'], $v['beschreibung_en'] ?: null,
                 $v['kurzbeschreibung'] ?: null, $v['kurzbeschreibung_en'] ?: null,
                 $v['sichtbar'], $v['programm_sichtbar'], $v['teilnehmer_sichtbar'],
-                $v['strasse'], $v['plz'], $v['ort'],
-                $v['ort_name'], $v['ort_url'], $lat, $lng, $id,
+                $ort_fields['strasse'], $ort_fields['plz'], $ort_fields['ort'],
+                $ort_fields['ort_name'], $ort_fields['ort_url'], $lat, $lng,
+                $v['veranstaltungsort_id'], $id,
             ]);
-            $pdo->prepare('DELETE FROM veranstaltung_tag WHERE veranstaltung_id = ?')->execute([$id]);
+            // Only delete days that were removed; keeps program items for surviving days
+            $newDates = array_values(array_filter(array_column($tage, 'datum')));
+            if ($newDates) {
+                $ph = implode(',', array_fill(0, count($newDates), '?'));
+                $pdo->prepare("DELETE FROM veranstaltung_tag WHERE veranstaltung_id = ? AND datum NOT IN ($ph)")
+                    ->execute(array_merge([$id], $newDates));
+            } else {
+                $pdo->prepare('DELETE FROM veranstaltung_tag WHERE veranstaltung_id = ?')->execute([$id]);
+            }
         } else {
             $pdo->prepare("
                 INSERT INTO veranstaltung
                     (name, name_en, beschreibung, beschreibung_en,
                      kurzbeschreibung, kurzbeschreibung_en,
                      sichtbar, programm_sichtbar, teilnehmer_sichtbar,
-                     strasse, plz, ort, ort_name, ort_url, lat, lng)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                     strasse, plz, ort, ort_name, ort_url, lat, lng,
+                     veranstaltungsort_id)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             ")->execute([
                 $v['name'], $v['name_en'] ?: null,
                 $v['beschreibung'], $v['beschreibung_en'] ?: null,
                 $v['kurzbeschreibung'] ?: null, $v['kurzbeschreibung_en'] ?: null,
                 $v['sichtbar'], $v['programm_sichtbar'], $v['teilnehmer_sichtbar'],
-                $v['strasse'], $v['plz'], $v['ort'],
-                $v['ort_name'], $v['ort_url'], $lat, $lng,
+                $ort_fields['strasse'], $ort_fields['plz'], $ort_fields['ort'],
+                $ort_fields['ort_name'], $ort_fields['ort_url'], $lat, $lng,
+                $v['veranstaltungsort_id'],
             ]);
             $id = (int) $pdo->lastInsertId();
         }
 
-        $ins = $pdo->prepare('INSERT INTO veranstaltung_tag (veranstaltung_id, datum, startzeit, endzeit) VALUES (?,?,?,?)');
+        $ins = $pdo->prepare('INSERT INTO veranstaltung_tag (veranstaltung_id, datum, startzeit, endzeit) VALUES (?,?,?,?)
+            ON DUPLICATE KEY UPDATE startzeit = VALUES(startzeit), endzeit = VALUES(endzeit)');
         foreach ($tage as $t) {
             if ($t['datum']) $ins->execute([$id, $t['datum'], $t['startzeit'], $t['endzeit']]);
         }
@@ -180,11 +200,11 @@ $participants = [];
 $prog_by_date = [];
 if ($is_edit) {
     $stmt = db()->prepare("
-        SELECT t.id, t.name, t.typ, vt.tischnummer
+        SELECT t.id, t.name, t.kategorie, vt.tischnummer
         FROM veranstaltung_teilnahme vt
         JOIN teilnehmer t ON t.id = vt.teilnehmer_id
         WHERE vt.veranstaltung_id = ?
-        ORDER BY t.typ, t.name
+        ORDER BY t.kategorie, t.name
     ");
     $stmt->execute([$id]);
     $participants = $stmt->fetchAll();
@@ -209,16 +229,24 @@ if ($is_edit && ($_POST['_ajax'] ?? '') === '1' && $errors) {
 
 $page_title = $is_copy ? 'Veranstaltung kopieren' : ($is_edit ? 'Veranstaltung bearbeiten' : 'Neue Veranstaltung');
 
+$current_ort = null;
+if ($v['veranstaltungsort_id']) {
+    $os = db()->prepare('SELECT * FROM veranstaltungsort WHERE id = ?');
+    $os->execute([$v['veranstaltungsort_id']]);
+    $current_ort = $os->fetch() ?: null;
+}
+
 echo adminTwig()->render('veranstaltungen/form.twig', [
-    'page_title'    => $page_title,
-    'nav_active'    => 'veranstaltungen',
-    'errors'        => $errors,
-    'v'             => $v,
-    'tage'          => $tage,
-    'is_edit'       => $is_edit,
-    'is_copy'       => $is_copy,
-    'id'            => $id,
-    'fetched_name'  => $fetched_name,
-    'participants'  => $participants,
-    'prog_by_date'  => $prog_by_date,
+    'page_title'   => $page_title,
+    'nav_active'   => 'veranstaltungen',
+    'errors'       => $errors,
+    'v'            => $v,
+    'tage'         => $tage,
+    'is_edit'      => $is_edit,
+    'is_copy'      => $is_copy,
+    'id'           => $id,
+    'fetched_name' => $fetched_name,
+    'participants' => $participants,
+    'prog_by_date' => $prog_by_date,
+    'current_ort'  => $current_ort,
 ]);
