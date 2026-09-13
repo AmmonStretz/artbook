@@ -9,14 +9,15 @@
   transition: all 0.15s;
   border: 1px solid transparent;
   text-decoration: none;
-}
-.pub-btn:hover {
-  text-decoration: none;
+
+  &:hover {
+    text-decoration: none;
+  }
 }
 
 .pub-btn-primary {
   background: var(--black);
-  color: #fff;
+  color: var(--white);
   border-color: var(--black);
 }
 
@@ -24,18 +25,20 @@
   background: transparent;
   color: var(--black);
   border-color: var(--black);
-}
-.pub-btn-outline:hover {
-  background: var(--black);
-  color: #fff;
+
+  &:hover {
+    background: var(--black);
+    color: var(--white);
+  }
 }
 
 .pub-btn-ghost {
   background: transparent;
   color: var(--mid);
   border-color: var(--border);
-}
-.pub-btn-ghost:hover {
-  border-color: var(--mid);
-  color: var(--dark);
+
+  &:hover {
+    border-color: var(--mid);
+    color: var(--dark);
+  }
 }

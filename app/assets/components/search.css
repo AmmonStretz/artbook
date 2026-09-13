@@ -12,13 +12,14 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
   font-size: 0.9375rem;
-  background: #fff;
+  background: var(--white);
   color: var(--dark);
   outline: none;
   transition: border-color 0.15s;
-}
-.pub-search-input:focus {
-  border-color: var(--dark);
+
+  &:focus {
+    border-color: var(--dark);
+  }
 }
 
 .pub-filter-select {
@@ -26,7 +27,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
   font-size: 0.9375rem;
-  background: #fff;
+  background: var(--white);
   color: var(--dark);
   cursor: pointer;
   outline: none;

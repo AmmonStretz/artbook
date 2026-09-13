@@ -10,14 +10,20 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
-  transition:
-    box-shadow 0.15s,
-    transform 0.15s;
+  transition: transform 0.15s;
+
+  &:hover {
+    transform: scale(1.04);
+    text-decoration: none;
+
+    .participant-thumb {
+      transform: scale(1.07);
+    }
+  }
 }
-.participant-card:hover {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
-  text-decoration: none;
+
+.participant-thumb-wrap {
+  overflow: hidden;
 }
 
 .participant-thumb {
@@ -25,6 +31,8 @@
   aspect-ratio: 1;
   object-fit: cover;
   background: var(--light);
+  transition: transform 0.3s;
+  display: block;
 }
 
 .participant-thumb-placeholder {
@@ -82,11 +90,12 @@
   transition:
     border-color 0.15s,
     color 0.15s;
-}
-.participant-event-chip:hover {
-  border-color: var(--gold);
-  color: var(--dark);
-  text-decoration: none;
+
+  &:hover {
+    border-color: var(--gold);
+    color: var(--dark);
+    text-decoration: none;
+  }
 }
 
 .participant-event-chip-year {
@@ -103,19 +112,20 @@
   position: relative;
   overflow: hidden;
   max-height: 380px;
-}
-.participant-preview-wrap::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    to bottom,
-    transparent 0%,
-    transparent 30%,
-    rgba(255, 255, 255, 0.65) 58%,
-    #fff 82%
-  );
-  pointer-events: none;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to bottom,
+      transparent 0%,
+      transparent 30%,
+      rgba(255, 255, 255, 0.65) 58%,
+      var(--white) 82%
+    );
+    pointer-events: none;
+  }
 }
 
 .participant-preview-btn {

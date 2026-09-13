@@ -3,10 +3,8 @@
   grid-template-columns: 1fr 340px;
   gap: 4rem;
   align-items: start;
-}
 
-@media (max-width: 768px) {
-  .contact-grid {
+  @media (max-width: 768px) {
     grid-template-columns: 1fr;
   }
 }
@@ -26,9 +24,10 @@
 .cf-label {
   font-size: 0.875rem;
   color: var(--mid);
-}
-.cf-label .req {
-  color: var(--gold);
+
+  .req {
+    color: var(--gold);
+  }
 }
 
 .cf-input,
@@ -39,15 +38,16 @@
   font-size: 0.9375rem;
   font-family: var(--font-sans);
   color: var(--dark);
-  background: #fff;
+  background: var(--white);
   outline: none;
   transition: border-color 0.15s;
   width: 100%;
+
+  &:focus {
+    border-color: var(--dark);
+  }
 }
-.cf-input:focus,
-.cf-textarea:focus {
-  border-color: var(--dark);
-}
+
 .cf-textarea {
   resize: vertical;
   min-height: 120px;
@@ -78,14 +78,16 @@
   font-size: 0.9rem;
   color: var(--mid);
   margin-bottom: 0.875rem;
-}
-.contact-info-row:last-child {
-  margin-bottom: 0;
-}
-.contact-info-row svg {
-  flex-shrink: 0;
-  margin-top: 0.1em;
-  color: var(--gold);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  svg {
+    flex-shrink: 0;
+    margin-top: 0.1em;
+    color: var(--gold);
+  }
 }
 
 .formular-download {

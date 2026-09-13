@@ -1,15 +1,15 @@
 .pub-footer {
   border-top: 1px solid var(--border);
   padding: 2.5rem 0;
-  background: #fff;
-}
+  background: var(--white);
 
-.pub-footer .container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  flex-wrap: wrap;
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
 }
 
 .pub-footer-brand {
@@ -21,14 +21,15 @@
 .pub-footer-links {
   display: flex;
   gap: 1.5rem;
-}
 
-.pub-footer-links a {
-  font-size: 0.875rem;
-  color: var(--muted);
-  transition: color 0.15s;
-}
-.pub-footer-links a:hover {
-  color: var(--dark);
-  text-decoration: none;
+  a {
+    font-size: 0.875rem;
+    color: var(--muted);
+    transition: color 0.15s;
+
+    &:hover {
+      color: var(--dark);
+      text-decoration: none;
+    }
+  }
 }
