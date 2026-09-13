@@ -14,9 +14,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $off  = ($page - 1) * $per;
 
     $typ_cond = match($typ) {
-        'kuenstler' => "AND t.typ = 'kuenstler'",
-        'gruppe'    => "AND t.typ = 'gruppe'",
-        default     => "AND t.typ IN ('kuenstler', 'gruppe')"
+        'kuenstler' => "AND t.kategorie = 'kuenstler'",
+        'gruppe'    => "AND t.kategorie != 'kuenstler'",
+        default     => ""
     };
     $q_cond = $q ? "AND t.name LIKE ?" : "";
 
@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $cnt->execute($params);
     $total = (int) $cnt->fetchColumn();
 
-    $list = db()->prepare("SELECT t.id, t.name, t.typ $base ORDER BY t.typ, t.name LIMIT ? OFFSET ?");
+    $list = db()->prepare("SELECT t.id, t.name, t.kategorie $base ORDER BY t.kategorie = 'kuenstler' DESC, t.name LIMIT ? OFFSET ?");
     $i = 1;
     foreach ($params as $p) { $list->bindValue($i++, $p); }
     $list->bindValue($i++, $per, PDO::PARAM_INT);
@@ -54,6 +54,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($tid) {
         db()->prepare("INSERT IGNORE INTO veranstaltung_teilnahme (veranstaltung_id, teilnehmer_id, tischnummer) VALUES (?,?,?)")
             ->execute([$vid, $tid, $nr]);
+
+        // Auto-populate per-event members for groups
+        $kat_stmt = db()->prepare("SELECT kategorie FROM teilnehmer WHERE id = ?");
+        $kat_stmt->execute([$tid]);
+        $kategorie = $kat_stmt->fetchColumn();
+
+        if ($kategorie && $kategorie !== 'kuenstler') {
+            // Copy member selection from most recent previous event for this group
+            $prev_stmt = db()->prepare("
+                SELECT veranstaltung_id FROM veranstaltung_gruppe_mitglied
+                WHERE gruppe_id = ? AND veranstaltung_id != ?
+                GROUP BY veranstaltung_id ORDER BY veranstaltung_id DESC LIMIT 1
+            ");
+            $prev_stmt->execute([$tid, $vid]);
+            $prev_vid = $prev_stmt->fetchColumn();
+
+            if ($prev_vid) {
+                db()->prepare("
+                    INSERT IGNORE INTO veranstaltung_gruppe_mitglied (veranstaltung_id, gruppe_id, mitglied_id)
+                    SELECT ?, gruppe_id, mitglied_id FROM veranstaltung_gruppe_mitglied
+                    WHERE gruppe_id = ? AND veranstaltung_id = ?
+                ")->execute([$vid, $tid, $prev_vid]);
+            } else {
+                // First time: use all current global members as default
+                db()->prepare("
+                    INSERT IGNORE INTO veranstaltung_gruppe_mitglied (veranstaltung_id, gruppe_id, mitglied_id)
+                    SELECT ?, gruppe_id, mitglied_id FROM teilnehmer_mitglied WHERE gruppe_id = ?
+                ")->execute([$vid, $tid]);
+            }
+        }
+
         echo json_encode(['ok' => true]);
     } else {
         echo json_encode(['error' => 'invalid']);

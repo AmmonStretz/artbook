@@ -1,0 +1,78 @@
+{% extends 'base.twig' %}
+
+{% block content %}
+{% if flash %}
+  <div class="alert alert-{{ flash.type }}">{{ flash.msg }}</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">
+      Alle Veranstaltungsorte
+      <span style="color:var(--text-muted);font-weight:400;font-size:.875rem">&nbsp;{{ total }}</span>
+    </span>
+    <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+      <form method="get" class="search-form" style="display:flex;gap:.5rem;align-items:center">
+        <input type="search" name="q" value="{{ q }}"
+               placeholder="Suchen …" class="search-input" autocomplete="off">
+        {% if q %}
+          <a href="?" class="search-clear" title="Filter zurücksetzen">✕</a>
+        {% endif %}
+      </form>
+      <a href="/admin/orte/form.php" class="btn btn-primary btn-sm">
+        <i class="fa-solid fa-plus"></i>
+        Neuer Ort
+      </a>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Adresse</th>
+          <th style="text-align:center">Veranstaltungen</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if not rows %}
+          <tr>
+            <td colspan="4" style="text-align:center;color:var(--text-muted);padding:2.5rem 1rem">
+              {{ q ? 'Keine Ergebnisse.' : 'Noch keine Veranstaltungsorte vorhanden.' }}
+            </td>
+          </tr>
+        {% endif %}
+        {% for r in rows %}
+          <tr>
+            <td class="cell-name">{{ r.name }}</td>
+            <td style="color:var(--text-muted);font-size:.875rem">
+              {% if r.strasse %}{{ r.strasse }}, {% endif %}
+              {% if r.plz or r.ort %}{{ r.plz }} {{ r.ort }}{% endif %}
+            </td>
+            <td style="text-align:center;color:var(--text-muted)">
+              {{ r.anzahl_veranstaltungen > 0 ? r.anzahl_veranstaltungen : '–' }}
+            </td>
+            <td>
+              <div class="actions">
+                <a href="/admin/orte/form.php?id={{ r.id }}" class="btn btn-ghost btn-secondary btn-sm">
+                  <i class="fa-regular fa-pen"></i>Bearbeiten</a>
+                <a href="/admin/orte/delete.php?id={{ r.id }}" class="btn btn-ghost btn-sm"
+                   style="color:var(--danger)">
+                  <i class="fa-regular fa-close"></i>Löschen</a>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% set pagination_base = q ? '?q=' ~ q|url_encode : '' %}
+  {% include 'partials/pagination.twig' with {
+    page: page, pages: pages, total: total, offset: offset, per_page: per_page,
+    pagination_base: pagination_base
+  } %}
+</div>
+{% endblock %}

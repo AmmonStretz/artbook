@@ -44,27 +44,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    $db = db();
-    if ($pid) {
-        $db->prepare("UPDATE veranstaltung_programm
-                         SET datum=?, uhrzeit=?, titel=?, titel_en=?, beschreibung=?, beschreibung_en=?, ort_name=?, ort_name_en=?
-                       WHERE id=? AND veranstaltung_id=?")
-           ->execute([$datum, $zeit, $titel, $titel_en ?: null, $beschr ?: null, $beschr_en ?: null, $ort ?: null, $ort_en ?: null, $pid, $vid]);
-    } else {
-        $db->prepare("INSERT INTO veranstaltung_programm
-                          (veranstaltung_id, datum, uhrzeit, titel, titel_en, beschreibung, beschreibung_en, ort_name, ort_name_en)
-                      VALUES (?,?,?,?,?,?,?,?,?)")
-           ->execute([$vid, $datum, $zeit, $titel, $titel_en ?: null, $beschr ?: null, $beschr_en ?: null, $ort ?: null, $ort_en ?: null]);
-        $pid = (int)$db->lastInsertId();
-    }
+    try {
+        $db = db();
+        if ($pid) {
+            $db->prepare("UPDATE veranstaltung_programm
+                             SET datum=?, uhrzeit=?, titel=?, titel_en=?, beschreibung=?, beschreibung_en=?, ort_name=?, ort_name_en=?
+                           WHERE id=? AND veranstaltung_id=?")
+               ->execute([$datum, $zeit, $titel, $titel_en ?: null, $beschr ?: null, $beschr_en ?: null, $ort ?: null, $ort_en ?: null, $pid, $vid]);
+        } else {
+            $db->prepare("INSERT INTO veranstaltung_programm
+                              (veranstaltung_id, datum, uhrzeit, titel, titel_en, beschreibung, beschreibung_en, ort_name, ort_name_en)
+                          VALUES (?,?,?,?,?,?,?,?,?)")
+               ->execute([$vid, $datum, $zeit, $titel, $titel_en ?: null, $beschr ?: null, $beschr_en ?: null, $ort ?: null, $ort_en ?: null]);
+            $pid = (int)$db->lastInsertId();
+        }
 
-    $db->prepare("DELETE FROM programm_teilnehmer WHERE programm_id = ?")->execute([$pid]);
-    if ($tnIds) {
-        $ins = $db->prepare("INSERT IGNORE INTO programm_teilnehmer (programm_id, teilnehmer_id) VALUES (?,?)");
-        foreach ($tnIds as $tid) { if ($tid) $ins->execute([$pid, $tid]); }
-    }
+        $db->prepare("DELETE FROM programm_teilnehmer WHERE programm_id = ?")->execute([$pid]);
+        if ($tnIds) {
+            $ins = $db->prepare("INSERT IGNORE INTO programm_teilnehmer (programm_id, teilnehmer_id) VALUES (?,?)");
+            foreach ($tnIds as $tid) { if ($tid) $ins->execute([$pid, $tid]); }
+        }
 
-    echo json_encode(['ok' => true, 'id' => $pid, 'datum' => $datum]);
+        echo json_encode(['ok' => true, 'id' => $pid, 'datum' => $datum]);
+    } catch (PDOException $e) {
+        echo json_encode(['ok' => false, 'errors' => ['Datenbankfehler: ' . $e->getMessage()]]);
+    }
     exit;
 }
 
@@ -87,11 +91,11 @@ if ($action === 'list') {
 $pid = (int)($_GET['id'] ?? 0);
 
 $ep = db()->prepare("
-    SELECT t.id, t.name, t.typ
+    SELECT t.id, t.name, t.kategorie
     FROM veranstaltung_teilnahme vt
     JOIN teilnehmer t ON t.id = vt.teilnehmer_id
     WHERE vt.veranstaltung_id = ?
-    ORDER BY t.typ, t.name
+    ORDER BY t.kategorie, t.name
 ");
 $ep->execute([$vid]);
 $participants = $ep->fetchAll();

@@ -1,0 +1,187 @@
+{% extends 'base.twig' %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="/assets/tiptap/tiptap.css">
+{% endblock %}
+
+{% block content %}
+{% if errors %}
+  <div class="alert alert-error" style="max-width:680px">
+    {% for e in errors %}<div>{{ e }}</div>{% endfor %}
+  </div>
+{% endif %}
+
+<div style="max-width:680px;display:flex;flex-direction:column;gap:1.25rem">
+
+<form method="post" id="main-form" novalidate>
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">{{ page_title }}</span>
+    <a href="/admin/orte/" class="btn btn-ghost btn-sm">← Zurück zur Liste</a>
+  </div>
+  <div class="card-body">
+
+    <div class="form-grid">
+      <div class="form-group span-2">
+        <label for="name">Name des Veranstaltungsorts <span class="req">*</span></label>
+        <input type="text" id="name" name="name" value="{{ v.name }}" required autofocus
+               placeholder="z.B. Kunstquartier Bethanien">
+      </div>
+      <div class="form-group span-2">
+        <label for="strasse">Straße & Hausnummer</label>
+        <input type="text" id="strasse" name="strasse" value="{{ v.strasse|default('') }}">
+      </div>
+      <div class="form-group">
+        <label for="plz">PLZ</label>
+        <input type="text" id="plz" name="plz" value="{{ v.plz|default('') }}">
+      </div>
+      <div class="form-group">
+        <label for="ort">Ort</label>
+        <input type="text" id="ort" name="ort" value="{{ v.ort|default('') }}">
+      </div>
+      <div class="form-group span-2">
+        <label for="land">Land</label>
+        <input type="text" id="land" name="land" value="{{ v.land|default('Deutschland') }}">
+      </div>
+      <div class="form-group span-2">
+        <label for="ort_url">Website <span style="color:var(--text-muted);font-weight:400">(optional)</span></label>
+        <input type="text" id="ort_url" name="ort_url"
+               value="{{ v.ort_url|default('') }}" placeholder="https://…">
+      </div>
+      <div class="form-group span-2">
+        <label>Anfahrtsbeschreibung <span style="color:var(--text-muted);font-weight:400">(optional)</span></label>
+        <div id="quill-editor-anfahrt"></div>
+        <input type="hidden" name="anfahrtsbeschreibung" id="anfahrtsbeschreibung-input"
+               value="{{ v.anfahrtsbeschreibung|default('') }}">
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">Koordinaten</div>
+      <div class="map-wrap" style="margin-bottom:.75rem">
+        <div id="map"></div>
+      </div>
+      <p class="map-hint">
+        <i class="fa-solid fa-circle-info"></i>
+        Auf die Karte klicken, um einen Marker zu setzen – oder Koordinaten direkt eingeben.
+      </p>
+      <div class="form-grid" style="margin-top:.75rem">
+        <div class="form-group">
+          <label for="lat">Breitengrad</label>
+          <input type="number" id="lat" name="lat" step="any" min="-90" max="90"
+                 value="{{ v.lat|default('') }}" placeholder="z.B. 52.5000">
+        </div>
+        <div class="form-group">
+          <label for="lng">Längengrad</label>
+          <input type="number" id="lng" name="lng" step="any" min="-180" max="180"
+                 value="{{ v.lng|default('') }}" placeholder="z.B. 13.4050">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">
+        {{ is_edit ? 'Änderungen speichern' : 'Ort erstellen' }}
+      </button>
+      <a href="/admin/orte/" class="btn btn-secondary">Abbrechen</a>
+      {% if is_edit %}
+        <a href="/admin/orte/delete.php?id={{ id }}" class="btn btn-ghost btn-sm"
+           style="margin-left:auto;color:var(--danger)">Löschen</a>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+</form>
+
+{% if is_edit and veranstaltungen %}
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">Veranstaltungen an diesem Ort</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <tbody>
+        {% for v in veranstaltungen %}
+          <tr>
+            <td class="cell-name">{{ v.name }}</td>
+            <td style="color:var(--text-muted);font-size:.875rem">
+              {% if v.erster_tag %}{{ v.erster_tag|date('Y') }}{% endif %}
+            </td>
+            <td>
+              <a href="/admin/veranstaltungen/form.php?id={{ v.id }}" class="btn btn-ghost btn-sm">
+                Bearbeiten
+              </a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module">
+import { mkEditor, edHTML } from '/assets/tiptap/init.js';
+const edAnfahrt = mkEditor(document.getElementById('quill-editor-anfahrt'), {
+  placeholder: 'Wie kommt man zur Veranstaltung …',
+  initialHTML: {{ v.anfahrtsbeschreibung|default('')|json_encode|raw }},
+});
+document.getElementById('main-form').addEventListener('submit', () => {
+  document.getElementById('anfahrtsbeschreibung-input').value = edHTML(edAnfahrt);
+});
+</script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconUrl:       'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+});
+
+const initLat = parseFloat(document.getElementById('lat').value);
+const initLng = parseFloat(document.getElementById('lng').value);
+const hasCoords = !isNaN(initLat) && !isNaN(initLng);
+
+const map = L.map('map').setView(
+  hasCoords ? [initLat, initLng] : [51.1657, 10.4515],
+  hasCoords ? 14 : 6
+);
+
+L.tileLayer('https://tiles.stadiamaps.com/tiles/outdoors/{z}/{x}/{y}{r}.{ext}', {
+  minZoom: 0,
+  maxZoom: 20,
+  attribution: '&copy; <a href="https://www.stadiamaps.com/" target="_blank">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  ext: 'png'
+}).addTo(map);
+
+let marker = hasCoords ? L.marker([initLat, initLng]).addTo(map) : null;
+
+function placeMarker(lat, lng) {
+  const pos = [+lat.toFixed(6), +lng.toFixed(6)];
+  marker ? marker.setLatLng(pos) : (marker = L.marker(pos).addTo(map));
+  document.getElementById('lat').value = pos[0];
+  document.getElementById('lng').value = pos[1];
+}
+
+map.on('click', e => placeMarker(e.latlng.lat, e.latlng.lng));
+
+function syncMapFromInputs() {
+  const lat = parseFloat(document.getElementById('lat').value);
+  const lng = parseFloat(document.getElementById('lng').value);
+  if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+    placeMarker(lat, lng);
+    map.setView([lat, lng], map.getZoom() < 10 ? 14 : map.getZoom());
+  }
+}
+
+document.getElementById('lat').addEventListener('change', syncMapFromInputs);
+document.getElementById('lng').addEventListener('change', syncMapFromInputs);
+</script>
+{% endblock %}

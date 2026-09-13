@@ -18,11 +18,11 @@ $days_stmt->execute([$vid]);
 $days = $days_stmt->fetchAll(PDO::FETCH_COLUMN);
 
 $ep_stmt = db()->prepare("
-    SELECT t.id, t.name, t.typ
+    SELECT t.id, t.name, t.kategorie
     FROM veranstaltung_teilnahme vt
     JOIN teilnehmer t ON t.id = vt.teilnehmer_id
     WHERE vt.veranstaltung_id = ?
-    ORDER BY t.typ, t.name
+    ORDER BY t.kategorie, t.name
 ");
 $ep_stmt->execute([$vid]);
 $event_participants = $ep_stmt->fetchAll();

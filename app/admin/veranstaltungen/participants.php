@@ -46,11 +46,11 @@ $page  = min($page, $pages);
 $off   = ($page - 1) * $per;
 
 $stmt = db()->prepare("
-    SELECT t.id, t.name, t.typ, vt.tischnummer
+    SELECT t.id, t.name, t.kategorie, vt.tischnummer
     FROM veranstaltung_teilnahme vt
     JOIN teilnehmer t ON t.id = vt.teilnehmer_id
     $where
-    ORDER BY t.typ, t.name
+    ORDER BY t.kategorie, t.name
     LIMIT ? OFFSET ?
 ");
 $i = 1;

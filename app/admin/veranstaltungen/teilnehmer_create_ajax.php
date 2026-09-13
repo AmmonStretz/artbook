@@ -8,41 +8,25 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$typ        = $_POST['typ']        ?? '';
 $name       = trim($_POST['name'] ?? '');
-$gruppe_typ = trim($_POST['gruppe_typ'] ?? '');
+$kategorie = trim($_POST['kategorie'] ?? '') ?: null;
 $vid        = (int)($_POST['veranstaltung_id'] ?? 0);
 $add        = ($_POST['add_to_event'] ?? '0') === '1';
 $nr         = trim($_POST['tischnummer'] ?? '') ?: null;
 
-if (!in_array($typ, ['kuenstler', 'gruppe'], true)) {
-    echo json_encode(['ok' => false, 'error' => 'Ungültiger Typ.']);
-    exit;
-}
 if (!$name) {
     echo json_encode(['ok' => false, 'error' => 'Name ist ein Pflichtfeld.']);
     exit;
 }
-if ($typ === 'gruppe') {
-    if (!$gruppe_typ) {
-        echo json_encode(['ok' => false, 'error' => 'Gruppentyp ist ein Pflichtfeld.']);
-        exit;
-    }
-    if (!array_key_exists($gruppe_typ, GRUPPE_TYPEN)) {
-        echo json_encode(['ok' => false, 'error' => 'Ungültiger Gruppentyp.']);
-        exit;
-    }
+if ($kategorie && !array_key_exists($kategorie, TEILNEHMER_KATEGORIEN)) {
+    echo json_encode(['ok' => false, 'error' => 'Ungültiger Gruppentyp.']);
+    exit;
 }
 
 $db = db();
 
-if ($typ === 'kuenstler') {
-    $db->prepare("INSERT INTO teilnehmer (typ, name) VALUES ('kuenstler', ?)")
-       ->execute([$name]);
-} else {
-    $db->prepare("INSERT INTO teilnehmer (typ, name, gruppe_typ) VALUES ('gruppe', ?, ?)")
-       ->execute([$name, $gruppe_typ]);
-}
+$db->prepare("INSERT INTO teilnehmer (name, kategorie) VALUES (?, ?)")
+   ->execute([$name, $kategorie]);
 $new_id = (int)$db->lastInsertId();
 
 if ($add && $vid) {
@@ -50,4 +34,4 @@ if ($add && $vid) {
        ->execute([$vid, $new_id, $nr]);
 }
 
-echo json_encode(['ok' => true, 'id' => $new_id, 'name' => $name, 'typ' => $typ]);
+echo json_encode(['ok' => true, 'id' => $new_id, 'name' => $name, 'kategorie' => $kategorie]);

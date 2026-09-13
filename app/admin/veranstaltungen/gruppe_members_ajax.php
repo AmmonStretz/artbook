@@ -15,8 +15,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $like = $q ? "%$q%" : null;
 
     if ($mode === 'available') {
-        $where  = "k.typ = 'kuenstler' AND k.id NOT IN (SELECT kuenstler_id FROM gruppe_kuenstler WHERE gruppe_id = ?)";
-        $params = [$gid];
+        $where  = "k.id != ? AND k.id NOT IN (SELECT mitglied_id FROM teilnehmer_mitglied WHERE gruppe_id = ?)";
+        $params = [$gid, $gid];
         if ($like) { $where .= ' AND k.name LIKE ?'; $params[] = $like; }
 
         $cnt = db()->prepare("SELECT COUNT(*) FROM teilnehmer k WHERE $where");
@@ -29,18 +29,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $stmt = db()->prepare("SELECT k.id, k.name FROM teilnehmer k WHERE $where ORDER BY k.name LIMIT ? OFFSET ?");
         $stmt->execute([...$params, $per, $off]);
     } else {
-        $where  = 'gk.gruppe_id = ?';
+        $where  = 'tm.gruppe_id = ?';
         $params = [$gid];
         if ($like) { $where .= ' AND k.name LIKE ?'; $params[] = $like; }
 
-        $cnt = db()->prepare("SELECT COUNT(*) FROM gruppe_kuenstler gk JOIN teilnehmer k ON k.id = gk.kuenstler_id WHERE $where");
+        $cnt = db()->prepare("SELECT COUNT(*) FROM teilnehmer_mitglied tm JOIN teilnehmer k ON k.id = tm.mitglied_id WHERE $where");
         $cnt->execute($params);
         $total = (int)$cnt->fetchColumn();
         $pages = max(1, (int)ceil($total / $per));
         $page  = min($page, $pages);
         $off   = ($page - 1) * $per;
 
-        $stmt = db()->prepare("SELECT k.id, k.name FROM teilnehmer k JOIN gruppe_kuenstler gk ON gk.kuenstler_id = k.id WHERE $where ORDER BY k.name LIMIT ? OFFSET ?");
+        $stmt = db()->prepare("SELECT k.id, k.name FROM teilnehmer k JOIN teilnehmer_mitglied tm ON tm.mitglied_id = k.id WHERE $where ORDER BY k.name LIMIT ? OFFSET ?");
         $stmt->execute([...$params, $per, $off]);
     }
 
@@ -57,11 +57,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$gid || !$kid) { echo json_encode(['ok' => false]); exit; }
 
     if ($action === 'add') {
-        db()->prepare("INSERT IGNORE INTO gruppe_kuenstler (gruppe_id, kuenstler_id) VALUES (?, ?)")
+        db()->prepare("INSERT IGNORE INTO teilnehmer_mitglied (gruppe_id, mitglied_id) VALUES (?, ?)")
            ->execute([$gid, $kid]);
         echo json_encode(['ok' => true]);
     } elseif ($action === 'remove') {
-        db()->prepare("DELETE FROM gruppe_kuenstler WHERE gruppe_id = ? AND kuenstler_id = ?")
+        db()->prepare("DELETE FROM teilnehmer_mitglied WHERE gruppe_id = ? AND mitglied_id = ?")
            ->execute([$gid, $kid]);
         echo json_encode(['ok' => true]);
     } else {
