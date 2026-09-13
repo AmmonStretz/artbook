@@ -48,7 +48,7 @@
             <td class="cell-name">{{ r.name }}</td>
             <td>
               {% if r.link %}
-                <a href="{{ r.link }}" target="_blank" rel="noopener"
+                <a href="{{ r.link|externalUrl }}" target="_blank" rel="noopener"
                    class="cell-link" title="{{ r.link }}">
                   <i class="fa-solid fa-link"></i>
                   Link

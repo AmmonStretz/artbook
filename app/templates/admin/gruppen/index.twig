@@ -58,7 +58,7 @@
             <td style="text-align:center;color:var(--text-muted)">{{ r.anzahl_kuenstler }}</td>
             <td>
               {% if r.link %}
-                <a href="{{ r.link }}" target="_blank" rel="noopener"
+                <a href="{{ r.link|externalUrl }}" target="_blank" rel="noopener"
                    class="cell-link" title="{{ r.link }}">
                   <i class="fa-solid fa-link"></i>Link
                 </a>
