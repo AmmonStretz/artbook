@@ -1,37 +1,72 @@
 {% extends 'base.twig' %}
 
 {% block head_extra %}
-  <link rel="stylesheet" href="/assets/event-preview.css">
+  {% if has_map %}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  {% endif %}
 {% endblock %}
 
 {% block content %}
-  {% if active_event and active_event.erster_tag %}
-    <script type="application/ld+json">
-    {{ json_ld|raw }}
-    </script>
-  {% endif %}
+  {% if event %}
+    {% if json_ld %}
+      <script type="application/ld+json">
+      {{ json_ld|raw }}
+      </script>
+    {% endif %}
 
-  <section class="hero">
-    <div class="container">
-      <div class="hero-inner">
-        <h1 class="hero-title">{{ SITE_NAME }}</h1>
-        {% if lang == 'en' and meta.einladung_en %}
-          <div class="hero-body">{{ meta.einladung_en|raw }}</div>
-        {% elseif meta.einladung %}
-          <div class="hero-body">{{ meta.einladung|raw }}</div>
-        {% endif %}
+    {% set show_back_link = false %}
+    {% set header_minimal = true %}
+    {% set form_vid = null %}
+    {% set pagination_base = q ? '?q=' ~ q|url_encode : '' %}
+    {% include 'partials/event-detail-content.twig' %}
+
+    {% if past_events_count > 0 %}
+      <section class="archive-banner">
+        <div class="container">
+          <div class="section-title">{{ t('home.past_events') }}</div>
+          <div class="section-body">{{ t('home.past_events_desc') }}</div>
+          <a href="{{ langUrl('/archiv.php') }}" class="pub-btn"
+            style="background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.3)">{{ t('home.to_archive') }}</a>
+        </div>
+      </section>
+    {% endif %}
+  {% else %}
+    <section class="hero">
+      <div class="container">
+        <div class="hero-inner">
+          <h1 class="hero-title">{{ SITE_NAME }}</h1>
+        </div>
       </div>
-    </div>
-  </section>
+    </section>
+  {% endif %}
+{% endblock %}
 
-  {% include 'partials/event-preview.twig' %}
+{% block scripts %}
+  {% if event %}
+    {% include 'partials/event-map-script.twig' with {'show_popup': false, 'interactive': false} %}
+  {% endif %}
+  <script>
+    (function () {
+      var img = document.querySelector('.detail-header--minimal .detail-header-img[data-parallax]');
+      if (img) {
+        function updateImg() {
+          img.style.transform = 'translateY(' + (-window.scrollY * 0.2) + 'px)';
+        }
+        window.addEventListener('scroll', updateImg, { passive: true });
+        updateImg();
+      }
 
-  <section class="archive-banner">
-    <div class="container">
-      <div class="section-title">{{ t('home.past_events') }}</div>
-      <div class="section-body">{{ t('home.past_events_desc') }}</div>
-      <a href="{{ langUrl('/archiv.php') }}" class="pub-btn"
-        style="background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.3)">{{ t('home.to_archive') }}</a>
-    </div>
-  </section>
+      var mapInner = document.querySelector('.ort-map-inner');
+      if (mapInner) {
+        var mapWrap = mapInner.parentElement;
+        function updateMap() {
+          var rect = mapWrap.getBoundingClientRect();
+          var offset = (window.innerHeight / 2 - (rect.top + rect.height / 2)) * -0.1;
+          mapInner.style.transform = 'translateY(' + offset + 'px)';
+        }
+        window.addEventListener('scroll', updateMap, { passive: true });
+        updateMap();
+      }
+    })();
+  </script>
 {% endblock %}

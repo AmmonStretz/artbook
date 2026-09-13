@@ -1,0 +1,333 @@
+{% set event_name = (lang == 'en' and event.name_en) ? event.name_en : event.name %}
+
+{% set _minimal = header_minimal is defined and header_minimal and muster_banner_url %}
+<section class="detail-header{{ muster_banner_url ? ' detail-header--with-image' : '' }}{{ _minimal ? ' detail-header--minimal' : '' }}">
+  {% if muster_banner_url %}
+    {% if muster_is_svg %}
+      <img src="{{ muster_banner_url }}" alt="" class="detail-header-img"{{ _minimal ? ' data-parallax' : '' }}>
+    {% else %}
+      <img src="{{ muster_banner_url }}"
+           srcset="{{ muster_banner_srcset }}"
+           sizes="100vw"
+           alt="" class="detail-header-img"{{ _minimal ? ' data-parallax' : '' }}>
+    {% endif %}
+    {% if not _minimal %}
+      <div class="detail-header-overlay"></div>
+    {% endif %}
+  {% endif %}
+  <div class="container">
+    {% if _minimal %}
+      {% if logo_url %}
+        <img src="{{ logo_url }}" alt="{{ event_name }}" class="detail-header-logo">
+      {% endif %}
+    {% else %}
+      {% if show_back_link is not defined or show_back_link %}
+        <a href="{{ langUrl('/') }}" class="detail-back">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+          {{ t('event.back_home') }}
+        </a>
+      {% endif %}
+      {% if logo_url %}
+        <img src="{{ logo_url }}" alt="{{ event_name }}" class="detail-header-logo">
+      {% else %}
+        <div class="detail-type-badge">{{ t('event.badge') }}</div>
+      {% endif %}
+      <h1 class="detail-title">{{ event_name }}</h1>
+      {% if in_bewerbung %}
+        <a href="{{ langUrl('/kontakt.php') }}" class="pub-btn detail-header-bew-btn" style="margin-top:.875rem;width:fit-content">
+          <i class="fa-solid fa-file-signature"></i>
+          {{ t('event.apply_now') }}
+        </a>
+      {% endif %}
+      {% if event.erster_tag or event.ort_name or event.ort %}
+        <div class="event-header-meta">
+          {% if event.erster_tag %}
+            <span>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+              {{ fmt(event.erster_tag) }}{{ event.letzter_tag != event.erster_tag ? ' – ' ~ fmt(event.letzter_tag) : '' }}
+            </span>
+          {% endif %}
+          {% if event.ort_name or event.ort %}
+            <span>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
+              </svg>
+              {{ event.ort_name ?: ((event.plz ~ ' ' ~ event.ort)|trim) }}
+            </span>
+          {% endif %}
+        </div>
+      {% endif %}
+    {% endif %}
+  </div>
+</section>
+
+<section class="section" style="padding-top:2.5rem;padding-bottom:2.5rem;border-bottom:1px solid var(--border)">
+  <div class="container">
+    <div class="event-detail-grid">
+      <div{{ _minimal ? ' class="home-desc-col"' : '' }}>
+        {% set beschr = (lang == 'en' and event.beschreibung_en) ? event.beschreibung_en : event.beschreibung %}
+        {% if beschr %}
+          <div class="detail-description">{{ beschr|raw }}</div>
+        {% endif %}
+        {% if has_addr and not (header_minimal is defined and header_minimal) %}
+          <div class="event-address-block">
+            <div class="section-label" style="margin-bottom:.625rem">{{ t('event.address') }}</div>
+            {% if event.ort_name %}<div class="event-address-name">{{ event.ort_name }}</div>{% endif %}
+            {% if event.strasse %}<div>{{ event.strasse }}</div>{% endif %}
+            {% if event.plz or event.ort %}<div>{{ (event.plz ~ ' ' ~ event.ort)|trim }}</div>{% endif %}
+            <div style="display:flex;gap:.625rem;flex-wrap:wrap;margin-top:1rem">
+              {% if event.ort_url %}
+                <a href="{{ event.ort_url }}" target="_blank" rel="noopener"
+                   class="pub-btn pub-btn-ghost" style="font-size:.8125rem;padding:.4rem .875rem">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
+                    <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                  </svg>
+                  {{ t('event.website') }}
+                </a>
+              {% endif %}
+              <a href="https://www.google.com/maps/search/?api=1&query={{ gmaps_query }}"
+                 target="_blank" rel="noopener"
+                 class="pub-btn pub-btn-ghost" style="font-size:.8125rem;padding:.4rem .875rem">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+                </svg>
+                {{ t('event.directions') }}
+              </a>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+
+      <div>
+        {% if days %}
+          {% if not _minimal %}
+            <div class="section-label" style="margin-bottom:.625rem">{{ t('event.opening_hours') }}</div>
+          {% endif %}
+          <div class="event-days-list">
+            {% for d in days %}
+              <div class="event-day-row">
+                <div>
+                  <div class="event-day-weekday">{{ fmtWeekday(d.datum) }}</div>
+                  <div class="event-day-date">{{ fmt(d.datum) }}</div>
+                </div>
+                <div class="event-day-time">{{ fmtTime(d.startzeit) }} – {{ fmtTime(d.endzeit) }}{% if lang == 'de' %} Uhr{% endif %}</div>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+        {% if has_map and show_back_link %}
+          <div class="section-label" style="margin-top:{{ days ? '2rem' : '0' }};margin-bottom:.625rem">{{ t('event.map') }}</div>
+          <div id="event-map" class="event-map-wrap"></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+
+{% if (header_minimal is defined and header_minimal) and (has_addr or has_map) %}
+<section class="ort-section">
+  <div class="container">
+    <h2 class="ort-heading">{{ t('event.venue') }}</h2>
+    <div class="ort-layout">
+      {% if has_map %}
+        <div class="ort-map-clip">
+          <div class="ort-map-parallax-wrap">
+            <div class="ort-map-inner">
+              <div id="event-map" class="ort-map"></div>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+      {% if has_addr %}
+        <div class="ort-address event-address-block">
+          <div class="ort-block-heading">{{ t('event.address') }}</div>
+          {% if event.ort_name %}<div class="event-address-name">{{ event.ort_name }}</div>{% endif %}
+          {% if event.strasse %}<div>{{ event.strasse }}</div>{% endif %}
+          {% if event.plz or event.ort %}<div>{{ (event.plz ~ ' ' ~ event.ort)|trim }}</div>{% endif %}
+          {% if event.anfahrtsbeschreibung %}
+            <div class="ort-block-heading" style="margin-top:1.25rem">{{ t('event.map') }}</div>
+            <div class="ort-anfahrtsbeschreibung">{{ event.anfahrtsbeschreibung|raw }}</div>
+          {% endif %}
+          <div style="display:flex;gap:.625rem;flex-wrap:wrap;margin-top:1.25rem">
+            {% if event.ort_url %}
+              <a href="{{ event.ort_url }}" target="_blank" rel="noopener"
+                 class="pub-btn pub-btn-ghost" style="font-size:.8125rem;padding:.4rem .875rem">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
+                  <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                </svg>
+                {{ t('event.website') }}
+              </a>
+            {% endif %}
+            <a href="https://www.google.com/maps/search/?api=1&query={{ gmaps_query }}"
+               target="_blank" rel="noopener"
+               class="pub-btn pub-btn-ghost" style="font-size:.8125rem;padding:.4rem .875rem">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+              </svg>
+              {{ t('event.directions') }}
+            </a>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{% if program_by_day %}
+  {% if header_minimal is defined and header_minimal %}
+    <section class="prog-preview-section">
+      <div class="container">
+        <h2 class="ort-heading" style="margin-bottom:0.5rem">{{ t('event.program') }}</h2>
+        <ul class="prog-home-list">
+          {% for datum, entries in preview_by_day %}
+            <li class="prog-home-day-group">
+              <div class="prog-home-day-label{{ not loop.first ? ' prog-home-day-label--gap' : '' }}">
+                {% if datum == date_today %}
+                  {{ t('time.today') }}
+                {% elseif datum == date_tomorrow %}
+                  {{ t('time.tomorrow') }}
+                {% else %}
+                  <span class="prog-home-weekday">{{ fmtWeekday(datum) }}</span>
+                  <span class="prog-home-date">{{ fmt(datum) }}</span>
+                {% endif %}
+              </div>
+              <ul class="prog-home-day-entries">
+                {% for e in entries %}
+                  {% set e_titel = (lang == 'en' and e.titel_en) ? e.titel_en : e.titel %}
+                  <li class="prog-home-entry prog-home-entry--{{ e.prog_status }}">
+                    <div class="prog-home-time">{{ e.uhrzeit|slice(0,5) }}{% if lang == 'de' %} Uhr{% endif %}</div>
+                    <div>
+                      <div class="prog-home-title">{{ e_titel|raw }}</div>
+                      {% if e.beschreibung %}
+                        <div class="prog-home-desc">{{ e.beschreibung|raw }}</div>
+                      {% endif %}
+                      {% if e.ort_name %}
+                        <div class="prog-home-location">{{ e.ort_name }}</div>
+                      {% endif %}
+                    </div>
+                  </li>
+                {% endfor %}
+              </ul>
+            </li>
+          {% endfor %}
+        </ul>
+        <a href="{{ langUrl('/programm.php') }}?id={{ vid }}" class="prog-home-more-link">
+          {{ t('event.view_full_program') }} →
+        </a>
+      </div>
+    </section>
+  {% else %}
+    <section class="section" style="padding-top:2.5rem;padding-bottom:2.5rem;border-bottom:1px solid var(--border)">
+      <div class="container">
+        <div class="prog-preview-header" style="margin-bottom:1.25rem">
+          <div class="section-label">{{ t('event.program') }}</div>
+          <a href="{{ langUrl('/programm.php') }}?id={{ vid }}" class="pub-btn pub-btn-ghost prog-preview-link">
+            {{ total_prog }} {{ total_prog == 1 ? t('event.program_item_sg') : t('event.program_item_pl') }} →
+          </a>
+        </div>
+        {% for e in preview3 %}
+          {% set e_titel = (lang == 'en' and e.titel_en) ? e.titel_en : e.titel %}
+          <div class="program-entry">
+            <div class="program-time">{{ e.uhrzeit|slice(0,5) }}{% if lang == 'de' %} Uhr{% endif %}</div>
+            <div>
+              <div class="program-title">{{ e_titel|raw }}</div>
+              {% if e.ort_name %}
+                <div class="program-location">{{ e.ort_name }}</div>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+        {% if total_prog > 3 %}
+          <div style="margin-top:1rem">
+            <a href="{{ langUrl('/programm.php') }}?id={{ vid }}" class="pub-btn pub-btn-outline" style="font-size:.875rem">
+              {{ t('event.view_full_program') }}
+            </a>
+          </div>
+        {% endif %}
+      </div>
+    </section>
+  {% endif %}
+{% endif %}
+
+{% if event.teilnehmer_sichtbar %}
+  <section class="section" style="padding-top:2rem">
+    <div class="container">
+      <div class="event-section-heading-row">
+        <h2 class="event-section-heading">
+          {% if q %}
+            {{ total }} {{ total == 1 ? t('event.result_sg') : t('event.result_pl') }} für «{{ q }}»
+          {% else %}
+            {{ total }} {{ t('event.participants') }}
+          {% endif %}
+        </h2>
+        {% if total > 0 %}
+          <a href="{{ langUrl('/veranstaltung/navigation.php') }}?id={{ vid }}" class="pub-btn pub-btn-ghost pub-btn-sm">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+              <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+            </svg>
+            Galerienavigation
+          </a>
+        {% endif %}
+      </div>
+
+      <form method="get" class="pub-search">
+        {% if form_vid is defined and form_vid %}
+          <input type="hidden" name="id" value="{{ form_vid }}">
+        {% endif %}
+        <input type="search" name="q" value="{{ q }}"
+               class="pub-search-input" placeholder="{{ t('event.search_participants') }}" autocomplete="off">
+        <button type="submit" class="pub-btn pub-btn-ghost">{{ t('event.search_btn') }}</button>
+        {% if q %}
+          <a href="{{ (form_vid is defined and form_vid) ? '?id=' ~ form_vid : langUrl('/') }}" class="pub-btn pub-btn-ghost">{{ t('event.reset') }}</a>
+        {% endif %}
+      </form>
+
+      {% if total == 0 %}
+        <p class="text-muted">{{ q ? t('event.no_results') : t('event.no_participants') }}</p>
+      {% else %}
+        <div class="participant-grid">
+          {% for p in participants %}
+            {% set thumb = thumbUrl(p.first_image) %}
+            {% set type_label = typeLabel(p.typ, p.gruppe_typ) %}
+            <a href="{{ langUrl('/teilnehmer.php') }}?id={{ p.id }}&vid={{ vid }}" class="participant-card">
+              <div class="participant-thumb-wrap">
+                {% if thumb %}
+                  <img src="{{ thumb }}" alt="{{ p.name }}" class="participant-thumb" loading="lazy">
+                {% else %}
+                  <div class="participant-thumb-placeholder">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <rect x="3" y="3" width="18" height="18" rx="2"/>
+                      <circle cx="8.5" cy="8.5" r="1.5"/>
+                      <polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                  </div>
+                {% endif %}
+              </div>
+              <div class="participant-info">
+                <div class="participant-name">{{ p.name }}</div>
+                <div class="participant-type">{{ type_label }}</div>
+                {% if p.tischnummer %}
+                  <div class="participant-stand">{{ t('event.stand') }} {{ p.tischnummer }}</div>
+                {% endif %}
+              </div>
+            </a>
+          {% endfor %}
+        </div>
+
+        {% include 'partials/pagination.twig' with {
+          page: page, pages: pages,
+          pagination_base: pagination_base
+        } %}
+      {% endif %}
+    </div>
+  </section>
+{% endif %}

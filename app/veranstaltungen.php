@@ -4,7 +4,7 @@ require_once __DIR__ . '/src/bootstrap.php';
 $today = date('Y-m-d');
 
 $stmt = db()->prepare("
-    SELECT v.id, v.name, v.ort_name, v.plz, v.ort, v.titelbild,
+    SELECT v.id, v.name, v.ort_name, v.plz, v.ort, v.muster, v.logo,
            MIN(t.datum) AS erster_tag, MAX(t.datum) AS letzter_tag,
            COUNT(DISTINCT vt.teilnehmer_id) AS tn_count
     FROM veranstaltung v

@@ -21,6 +21,7 @@ return [
     'event.view_all_participants' => 'View All Participants',
     'event.back_home'             => 'Home',
     'event.badge'                 => 'Event',
+    'event.venue'                 => 'Venue',
     'event.address'               => 'Address',
     'event.website'               => 'Website',
     'event.directions'            => 'Get Directions',
@@ -54,6 +55,7 @@ return [
     // Participant page
     'participant.visit_website' => 'Visit Website',
     'participant.members'       => 'Members',
+    'participant.past_members'  => 'Past Members',
     'participant.events'        => 'Events',
     'participant.program'       => 'Programme',
     'participant.works'         => 'Works',
@@ -100,6 +102,8 @@ return [
 
     // Time / misc
     'time.uhr'       => '',
+    'time.today'     => 'Today',
+    'time.tomorrow'  => 'Tomorrow',
     'site.description' => 'The art book fair for artist books, limited editions, and independent publications. 20–22 November 2026, Kunstquartier Bethanien, Berlin-Kreuzberg.',
     'og.locale'      => 'en_GB',
 ];

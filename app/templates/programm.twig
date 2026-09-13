@@ -4,9 +4,6 @@
   {% set event_name = (lang == 'en' and event.name_en) ? event.name_en : event.name %}
   <section class="detail-header" style="padding:2rem 0 1.75rem">
     <div class="container">
-      <a href="{{ langUrl('/veranstaltung.php') }}?id={{ vid }}" class="detail-back">
-        ← {{ event_name }}
-      </a>
       <h1 class="detail-title">{{ t('program.title') }}</h1>
       {% if event.erster_tag %}
         <p style="color:var(--muted);font-size:.9rem;margin-top:.375rem">
@@ -24,66 +21,53 @@
       </div>
     </section>
   {% else %}
-    <section class="section" style="padding-top:2rem">
+    <section class="section" style="padding-top:2rem;padding-bottom:3rem">
       <div class="container">
-        <div class="prog-tabs" role="tablist">
-          {% for d, entries in program_by_day %}
-            <button class="prog-tab {{ d == active_tab ? 'active' : '' }}"
-                    role="tab" aria-selected="{{ d == active_tab ? 'true' : 'false' }}"
-                    data-day="{{ d }}" onclick="switchDay('{{ d }}')">
-              <span class="prog-tab-weekday">{{ fmtWeekday(d) }}</span>
-              <span class="prog-tab-date">{{ d|date('d.m.') }}</span>
-            </button>
-          {% endfor %}
-        </div>
-
-        {% for datum, entries in program_by_day %}
-          <div class="prog-panel" id="day-{{ datum }}"{{ datum != active_tab ? ' hidden' : '' }}>
-            {% for e in entries %}
-              {% set e_titel = (lang == 'en' and e.titel_en) ? e.titel_en : e.titel %}
-              {% set e_beschr = (lang == 'en' and e.beschreibung_en) ? e.beschreibung_en : e.beschreibung %}
-              <div class="program-entry">
-                <div class="program-time">{{ e.uhrzeit|slice(0,5) }}{% if lang == 'de' %} Uhr{% endif %}</div>
-                <div>
-                  <div class="program-title">{{ e_titel|raw }}</div>
-                  {% if e.ort_name %}
-                    <div class="program-location">{{ e.ort_name }}</div>
-                  {% endif %}
-                  {% if e_beschr %}
-                    <div class="program-desc">{{ e_beschr|raw }}</div>
-                  {% endif %}
-                  {% if e.tn_ids %}
-                    {% set ids = e.tn_ids|split(',') %}
-                    {% set namen = e.tn_namen|split('\x01') %}
-                    <div class="program-participants">
-                      {% for i, tid in ids %}
-                        <a href="{{ langUrl('/teilnehmer.php') }}?id={{ tid|trim }}&vid={{ vid }}"
-                           class="program-participant-chip">{{ namen[i] ?? '' }}</a>
-                      {% endfor %}
-                    </div>
-                  {% endif %}
-                </div>
+        <ul class="prog-home-list">
+          {% for datum, entries in program_by_day %}
+            <li class="prog-home-day-group">
+              <div class="prog-home-day-label{{ not loop.first ? ' prog-home-day-label--gap' : '' }}">
+                {% if datum == date_today %}
+                  {{ t('time.today') }}
+                {% elseif datum == date_tomorrow %}
+                  {{ t('time.tomorrow') }}
+                {% else %}
+                  <span class="prog-home-weekday">{{ fmtWeekday(datum) }}</span>
+                  <span class="prog-home-date">{{ fmt(datum) }}</span>
+                {% endif %}
               </div>
-            {% endfor %}
-          </div>
-        {% endfor %}
+              <ul class="prog-home-day-entries">
+                {% for e in entries %}
+                  {% set e_titel = (lang == 'en' and e.titel_en) ? e.titel_en : e.titel %}
+                  {% set e_beschr = (lang == 'en' and e.beschreibung_en) ? e.beschreibung_en : e.beschreibung %}
+                  <li class="prog-home-entry prog-home-entry--{{ e.prog_status }}">
+                    <div class="prog-home-time">{{ e.uhrzeit|slice(0,5) }}{% if lang == 'de' %} Uhr{% endif %}</div>
+                    <div>
+                      <div class="prog-home-title">{{ e_titel|raw }}</div>
+                      {% if e.ort_name %}
+                        <div class="prog-home-location">{{ e.ort_name }}</div>
+                      {% endif %}
+                      {% if e_beschr %}
+                        <div class="prog-home-desc">{{ e_beschr|raw }}</div>
+                      {% endif %}
+                      {% if e.tn_ids %}
+                        {% set ids = e.tn_ids|split(',') %}
+                        {% set namen = e.tn_namen|split('\x01') %}
+                        <div class="program-participants">
+                          {% for i, tid in ids %}
+                            <a href="{{ langUrl('/teilnehmer.php') }}?id={{ tid|trim }}&vid={{ vid }}"
+                               class="program-participant-chip">{{ namen[i] ?? '' }}</a>
+                          {% endfor %}
+                        </div>
+                      {% endif %}
+                    </div>
+                  </li>
+                {% endfor %}
+              </ul>
+            </li>
+          {% endfor %}
+        </ul>
       </div>
     </section>
   {% endif %}
-{% endblock %}
-
-{% block scripts %}
-<script>
-function switchDay(day) {
-  document.querySelectorAll('.prog-panel').forEach(p => { p.hidden = true; });
-  document.querySelectorAll('.prog-tab').forEach(t => {
-    t.classList.remove('active');
-    t.setAttribute('aria-selected', 'false');
-  });
-  document.getElementById('day-' + day).hidden = false;
-  const btn = document.querySelector('[data-day="' + day + '"]');
-  btn.classList.add('active');
-  btn.setAttribute('aria-selected', 'true');
-}
-</script>
 {% endblock %}

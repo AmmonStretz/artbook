@@ -31,8 +31,10 @@
   <div class="container">
     <a href="{{ langUrl('/') }}" class="pub-logo">{{ SITE_NAME }}</a>
     <nav class="pub-nav">
-      <a href="{{ langUrl('/veranstaltungen.php') }}" class="{{ nav_active == 'veranstaltungen' ? 'active' : '' }}">{{ t('nav.events') }}</a>
-      <a href="{{ langUrl('/kuenstler.php') }}" class="{{ nav_active == 'kuenstler' ? 'active' : '' }}">{{ t('nav.artists') }}</a>
+      {% if event_count > 1 %}
+        <a href="{{ langUrl('/veranstaltungen.php') }}" class="{{ nav_active == 'veranstaltungen' ? 'active' : '' }}">{{ t('nav.events') }}</a>
+        <a href="{{ langUrl('/kuenstler.php') }}" class="{{ nav_active == 'kuenstler' ? 'active' : '' }}">{{ t('nav.artists') }}</a>
+      {% endif %}
       <a href="{{ langUrl('/kontakt.php') }}" class="{{ nav_active == 'kontakt' ? 'active' : '' }}">{{ t('nav.contact') }}</a>
       <div class="lang-switch">
         <a href="/de{{ request_uri_no_lang }}" class="{{ lang == 'de' ? 'active' : '' }}">DE</a>

@@ -4,16 +4,10 @@
   {% set beschr = (lang == 'en' and t.beschreibung_en) ? t.beschreibung_en : t.beschreibung %}
   <section class="detail-header">
     <div class="container">
-      <a href="{{ back_url }}" class="detail-back">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="15 18 9 12 15 6"/>
-        </svg>
-        {{ back_label }}
-      </a>
       <div class="detail-type-badge">{{ type_label }}</div>
       <h1 class="detail-title">{{ t.name }}</h1>
       {% if t.link %}
-        <a href="{{ t.link }}" target="_blank" rel="noopener"
+        <a href="{{ t.link|externalUrl }}" target="_blank" rel="noopener"
            class="pub-btn pub-btn-ghost" style="margin-top:.75rem;width:fit-content">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
@@ -34,29 +28,26 @@
         </div>
       {% endif %}
 
-      {% if t.typ == 'gruppe' and members %}
+      {% if bilder %}
         <div style="margin-bottom:2.5rem">
-          <div class="section-label">{{ t('participant.members') }}</div>
-          <ul class="members-list" style="max-width:480px">
-            {% for m in members %}
-              <li>
-                <a href="{{ langUrl('/teilnehmer.php') }}?id={{ m.id }}{{ vid ? '&vid=' ~ vid : '' }}">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
-                    <circle cx="12" cy="7" r="4"/>
-                  </svg>
-                  {{ m.name }}
-                </a>
-              </li>
+          <div class="section-label">{{ t('participant.works') }}</div>
+          <div class="detail-image-grid">
+            {% for b in bilder %}
+              <img src="{{ bildUrl(b.dateiname) }}"
+                   alt="{{ b.alt_text ?? b.titel ?? t.name }}"
+                   loading="lazy"
+                   onclick="openLightbox(this.src)">
             {% endfor %}
-          </ul>
+          </div>
         </div>
+      {% elseif not members %}
+        <p class="text-muted">{{ t('participant.no_works') }}</p>
       {% endif %}
 
       {% if attended_events %}
         <div style="margin-bottom:2.5rem">
           <div class="section-label">{{ t('participant.events') }}</div>
-          <div class="participant-events">
+          <div class="participant-events" style="margin-top:1rem">
             {% for e in attended_events %}
               {% set e_name = (lang == 'en' and e.name_en) ? e.name_en : e.name %}
               <a href="{{ langUrl('/veranstaltung.php') }}?id={{ e.id }}" class="participant-event-chip">
@@ -72,7 +63,7 @@
 
       {% if meine_programmpunkte %}
         <div style="margin-bottom:2.5rem">
-          <div class="section-label" style="margin-bottom:.875rem">{{ t('participant.program') }}</div>
+          <div class="section-label">{{ t('participant.program') }}</div>
           {% set prev_date = null %}
           {% set today_tp = "now"|date("Y-m-d") %}
           {% set now_time_tp = "now"|date("H:i:s") %}
@@ -107,18 +98,82 @@
         </div>
       {% endif %}
 
-      {% if bilder %}
-        <div class="section-label" style="margin-bottom:.75rem">{{ t('participant.works') }}</div>
-        <div class="detail-image-grid">
-          {% for b in bilder %}
-            <img src="{{ bildUrl(b.dateiname) }}"
-                 alt="{{ b.alt_text ?? b.titel ?? t.name }}"
-                 loading="lazy"
-                 onclick="openLightbox(this.src)">
-          {% endfor %}
+      {% if t.kategorie != 'kuenstler' and members %}
+        {% set members_with = members|filter(m => m.first_image is not empty) %}
+        {% set members_without = members|filter(m => m.first_image is empty) %}
+        <div style="margin-bottom:2.5rem">
+          <div class="section-label">{{ t('participant.members') }}</div>
+          {% if members_with %}
+            <div class="participant-grid" style="margin-top:1rem">
+              {% for m in members_with %}
+                <a href="{{ langUrl('/teilnehmer.php') }}?id={{ m.id }}{{ vid ? '&vid=' ~ vid : '' }}" class="participant-card">
+                  <div class="participant-thumb-wrap">
+                    <img src="{{ thumbUrl(m.first_image) }}" alt="{{ m.name }}" class="participant-thumb" loading="lazy">
+                  </div>
+                  <div class="participant-info">
+                    <div class="participant-name">{{ m.name }}</div>
+                  </div>
+                </a>
+              {% endfor %}
+            </div>
+          {% endif %}
+          {% if members_without %}
+            <div class="participant-events" style="margin-top:{{ members_with ? '1.25rem' : '1rem' }}">
+              {% for m in members_without %}
+                {% if m.link %}
+                  <a href="{{ m.link|externalUrl }}" target="_blank" rel="noopener" class="participant-event-chip">
+                    {{ m.name }}
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.6;flex-shrink:0">
+                      <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
+                      <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                    </svg>
+                  </a>
+                {% else %}
+                  <span class="participant-event-chip" style="cursor:default;opacity:.5">{{ m.name }}</span>
+                {% endif %}
+              {% endfor %}
+            </div>
+          {% endif %}
         </div>
-      {% elseif not members %}
-        <p class="text-muted">{{ t('participant.no_works') }}</p>
+      {% endif %}
+
+      {% if t.kategorie != 'kuenstler' and past_members %}
+        {% set past_with = past_members|filter(m => m.first_image is not empty) %}
+        {% set past_without = past_members|filter(m => m.first_image is empty) %}
+        <div style="margin-bottom:2.5rem">
+          <div class="section-label">{{ t('participant.past_members') }}</div>
+          {% if past_with %}
+            <div class="participant-grid" style="margin-top:1rem">
+              {% for m in past_with %}
+                <a href="{{ langUrl('/teilnehmer.php') }}?id={{ m.id }}" class="participant-card">
+                  <div class="participant-thumb-wrap">
+                    <img src="{{ thumbUrl(m.first_image) }}" alt="{{ m.name }}" class="participant-thumb" loading="lazy">
+                  </div>
+                  <div class="participant-info">
+                    <div class="participant-name">{{ m.name }}</div>
+                  </div>
+                </a>
+              {% endfor %}
+            </div>
+          {% endif %}
+          {% if past_without %}
+            <div class="participant-events" style="margin-top:{{ past_with ? '1.25rem' : '1rem' }}">
+              {% for m in past_without %}
+                {% if m.link %}
+                  <a href="{{ m.link|externalUrl }}" target="_blank" rel="noopener" class="participant-event-chip">
+                    {{ m.name }}
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.6;flex-shrink:0">
+                      <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
+                      <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                    </svg>
+                  </a>
+                {% else %}
+                  <span class="participant-event-chip" style="cursor:default;opacity:.5">{{ m.name }}</span>
+                {% endif %}
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
       {% endif %}
 
     </div>

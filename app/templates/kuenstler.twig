@@ -41,17 +41,19 @@
             {% set thumb = thumbUrl(r.first_image) %}
             {% set type_label = typeLabel(r.typ, r.gruppe_typ) %}
             <a href="{{ langUrl('/teilnehmer.php') }}?id={{ r.id }}" class="participant-card">
-              {% if thumb %}
-                <img src="{{ thumb }}" alt="{{ r.name }}" class="participant-thumb" loading="lazy">
-              {% else %}
-                <div class="participant-thumb-placeholder">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <rect x="3" y="3" width="18" height="18" rx="2"/>
-                    <circle cx="8.5" cy="8.5" r="1.5"/>
-                    <polyline points="21 15 16 10 5 21"/>
-                  </svg>
-                </div>
-              {% endif %}
+              <div class="participant-thumb-wrap">
+                {% if thumb %}
+                  <img src="{{ thumb }}" alt="{{ r.name }}" class="participant-thumb" loading="lazy">
+                {% else %}
+                  <div class="participant-thumb-placeholder">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <rect x="3" y="3" width="18" height="18" rx="2"/>
+                      <circle cx="8.5" cy="8.5" r="1.5"/>
+                      <polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                  </div>
+                {% endif %}
+              </div>
               <div class="participant-info">
                 <div class="participant-name">{{ r.name }}</div>
                 <div class="participant-type">{{ type_label }}</div>

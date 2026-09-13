@@ -10,19 +10,64 @@ $stmt->execute([$tid]);
 $t = $stmt->fetch();
 if (!$t) { header('Location: /'); exit; }
 
-$bilder = db()->prepare("SELECT * FROM teilnehmer_bild WHERE teilnehmer_id = ? ORDER BY id");
-$bilder->execute([$tid]);
-$bilder = $bilder->fetchAll();
+$is_gruppe = $t['kategorie'] !== 'kuenstler';
 
-$members = [];
-if ($t['typ'] === 'gruppe') {
+if ($is_gruppe && $vid) {
+    // Active members for this specific event
     $ms = db()->prepare("
-        SELECT k.id, k.name FROM teilnehmer k
-        JOIN gruppe_kuenstler gk ON gk.kuenstler_id = k.id
-        WHERE gk.gruppe_id = ? ORDER BY k.name
+        SELECT k.id, k.name, k.link,
+               (SELECT b.dateiname FROM teilnehmer_bild b WHERE b.teilnehmer_id = k.id ORDER BY b.id ASC LIMIT 1) AS first_image
+        FROM teilnehmer k
+        JOIN veranstaltung_gruppe_mitglied vgm ON vgm.mitglied_id = k.id
+        WHERE vgm.gruppe_id = ? AND vgm.veranstaltung_id = ?
+        ORDER BY k.name
+    ");
+    $ms->execute([$tid, $vid]);
+    $members = $ms->fetchAll();
+
+    // Past members: in the group globally but not active for this event
+    $pm = db()->prepare("
+        SELECT k.id, k.name, k.link,
+               (SELECT b.dateiname FROM teilnehmer_bild b WHERE b.teilnehmer_id = k.id ORDER BY b.id ASC LIMIT 1) AS first_image
+        FROM teilnehmer k
+        JOIN teilnehmer_mitglied tm ON tm.mitglied_id = k.id
+        WHERE tm.gruppe_id = ?
+        AND k.id NOT IN (
+            SELECT mitglied_id FROM veranstaltung_gruppe_mitglied
+            WHERE gruppe_id = ? AND veranstaltung_id = ?
+        )
+        ORDER BY k.name
+    ");
+    $pm->execute([$tid, $tid, $vid]);
+    $past_members = $pm->fetchAll();
+
+    // Images: active member images first, then group's own images
+    $bild_active = db()->prepare("
+        SELECT b.* FROM teilnehmer_bild b
+        JOIN veranstaltung_gruppe_mitglied vgm ON vgm.mitglied_id = b.teilnehmer_id
+        WHERE vgm.gruppe_id = ? AND vgm.veranstaltung_id = ?
+        ORDER BY b.id
+    ");
+    $bild_active->execute([$tid, $vid]);
+    $bild_own = db()->prepare("SELECT * FROM teilnehmer_bild WHERE teilnehmer_id = ? ORDER BY id");
+    $bild_own->execute([$tid]);
+    $bilder = array_merge($bild_active->fetchAll(), $bild_own->fetchAll());
+} else {
+    // No event context: show all global members
+    $ms = db()->prepare("
+        SELECT k.id, k.name, k.link,
+               (SELECT b.dateiname FROM teilnehmer_bild b WHERE b.teilnehmer_id = k.id ORDER BY b.id ASC LIMIT 1) AS first_image
+        FROM teilnehmer k
+        JOIN teilnehmer_mitglied tm ON tm.mitglied_id = k.id
+        WHERE tm.gruppe_id = ? ORDER BY k.name
     ");
     $ms->execute([$tid]);
     $members = $ms->fetchAll();
+    $past_members = [];
+
+    $bild_stmt = db()->prepare("SELECT * FROM teilnehmer_bild WHERE teilnehmer_id = ? ORDER BY id");
+    $bild_stmt->execute([$tid]);
+    $bilder = $bild_stmt->fetchAll();
 }
 
 $ev_stmt = db()->prepare("
@@ -48,7 +93,7 @@ $prog_stmt = db()->prepare("
 $prog_stmt->execute([$tid]);
 $meine_programmpunkte = $prog_stmt->fetchAll();
 
-$type_label = typeLabel($t['typ'], $t['gruppe_typ'] ?? null);
+$type_label = typeLabel($t['kategorie'] ?? null);
 
 echo twig()->render('teilnehmer.twig', [
     'page_title'           => $t['name'],
@@ -59,8 +104,7 @@ echo twig()->render('teilnehmer.twig', [
     'type_label'           => $type_label,
     'bilder'               => $bilder,
     'members'              => $members,
+    'past_members'         => $past_members,
     'attended_events'      => $attended_events,
     'meine_programmpunkte' => $meine_programmpunkte,
-    'back_url'             => $vid ? langUrl("/veranstaltung.php?id=$vid") : langUrl('/kuenstler.php'),
-    'back_label'           => $vid ? t('participant.back_list') : t('participant.back_artists'),
 ]);

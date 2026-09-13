@@ -8,6 +8,7 @@ $typ  = $_GET['typ'] ?? '';
 $fvid = (int)($_GET['veranstaltung'] ?? 0) ?: null;
 
 if (!in_array($typ, ['', 'kuenstler', 'gruppe'])) $typ = '';
+// 'kuenstler' → kategorie = 'kuenstler', 'gruppe' → kategorie != 'kuenstler'
 if ($fvid) {
     $chk = db()->prepare("SELECT id FROM veranstaltung WHERE id = ? AND sichtbar = 1 AND teilnehmer_sichtbar = 1");
     $chk->execute([$fvid]);
@@ -16,8 +17,9 @@ if ($fvid) {
 
 $where  = ['1=1'];
 $params = [];
-if ($q)    { $where[] = 't.name LIKE ?'; $params[] = "%$q%"; }
-if ($typ)  { $where[] = 't.typ = ?';    $params[] = $typ; }
+if ($q)              { $where[] = 't.name LIKE ?'; $params[] = "%$q%"; }
+if ($typ === 'kuenstler') { $where[] = "t.kategorie = 'kuenstler'"; }
+if ($typ === 'gruppe')    { $where[] = "t.kategorie != 'kuenstler'"; }
 if ($fvid) { $where[] = 't.id IN (SELECT teilnehmer_id FROM veranstaltung_teilnahme WHERE veranstaltung_id = ?)'; $params[] = $fvid; }
 
 $where_sql = implode(' AND ', $where);
@@ -30,7 +32,7 @@ $page   = min($page, $pages);
 $offset = ($page - 1) * $per;
 
 $stmt = db()->prepare("
-    SELECT t.id, t.name, t.typ, t.gruppe_typ,
+    SELECT t.id, t.name, t.kategorie,
            (SELECT b.dateiname FROM teilnehmer_bild b
             WHERE b.teilnehmer_id = t.id ORDER BY b.id ASC LIMIT 1) AS first_image
     FROM teilnehmer t

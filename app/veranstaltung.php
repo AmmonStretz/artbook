@@ -10,9 +10,11 @@ $deadline = $meta['bewerbung_deadline'] ?? null;
 $in_bewerbung = $bew_vid === $vid && $deadline && date('Y-m-d') <= $deadline;
 
 $stmt = db()->prepare("
-    SELECT v.*, MIN(t.datum) AS erster_tag, MAX(t.datum) AS letzter_tag
+    SELECT v.*, o.anfahrtsbeschreibung,
+           MIN(t.datum) AS erster_tag, MAX(t.datum) AS letzter_tag
     FROM veranstaltung v
     LEFT JOIN veranstaltung_tag t ON t.veranstaltung_id = v.id
+    LEFT JOIN veranstaltungsort o ON o.id = v.veranstaltungsort_id
     WHERE v.id = ? AND v.sichtbar = 1
     GROUP BY v.id
 ");
@@ -89,8 +91,16 @@ if ($event['teilnehmer_sichtbar'] ?? 1) {
     $offset = ($page - 1) * $per;
 
     $pstmt = db()->prepare("
-        SELECT t.id, t.name, t.typ, t.gruppe_typ, vt.tischnummer,
-               (SELECT b.dateiname FROM teilnehmer_bild b WHERE b.teilnehmer_id = t.id ORDER BY b.id ASC LIMIT 1) AS first_image
+        SELECT t.id, t.name, t.kategorie, vt.tischnummer,
+               COALESCE(
+                   CASE WHEN t.kategorie != 'kuenstler' THEN
+                       (SELECT b.dateiname FROM teilnehmer_bild b
+                        JOIN veranstaltung_gruppe_mitglied vgm ON vgm.mitglied_id = b.teilnehmer_id
+                        WHERE vgm.gruppe_id = t.id AND vgm.veranstaltung_id = vt.veranstaltung_id
+                        ORDER BY b.id ASC LIMIT 1)
+                   END,
+                   (SELECT b.dateiname FROM teilnehmer_bild b WHERE b.teilnehmer_id = t.id ORDER BY b.id ASC LIMIT 1)
+               ) AS first_image
         FROM veranstaltung_teilnahme vt
         JOIN teilnehmer t ON t.id = vt.teilnehmer_id
         WHERE vt.veranstaltung_id = :vid $q_cond
@@ -107,14 +117,8 @@ if ($event['teilnehmer_sichtbar'] ?? 1) {
 $has_map  = $event['lat'] !== null && $event['lng'] !== null;
 $has_addr = $event['strasse'] || $event['ort'];
 
-$titelbild_url = null;
-if ($event['titelbild']) {
-    $stem = pathinfo($event['titelbild'], PATHINFO_FILENAME);
-    $path_1024 = IMG_UPLOAD_DIR . $stem . '_1024.jpg';
-    $titelbild_url = file_exists($path_1024)
-        ? IMG_UPLOAD_URL . $stem . '_1024.jpg'
-        : IMG_UPLOAD_URL . $event['titelbild'];
-}
+$muster_banner_url    = musterBannerUrl($event['muster'] ?? null);
+$muster_banner_srcset = musterBannerSrcset($event['muster'] ?? null);
 
 $gmaps_query = urlencode(
     ($event['ort_name'] ? $event['ort_name'] . ', ' : '') .
@@ -138,8 +142,11 @@ echo twig()->render('veranstaltung.twig', [
     'pages'          => $pages,
     'page'           => $page,
     'q'              => $q,
-    'has_map'        => $has_map,
-    'has_addr'       => $has_addr,
-    'titelbild_url'  => $titelbild_url,
-    'gmaps_query'    => $gmaps_query,
+    'has_map'              => $has_map,
+    'has_addr'             => $has_addr,
+    'muster_banner_url'    => $muster_banner_url,
+    'muster_banner_srcset' => $muster_banner_srcset,
+    'muster_is_svg'        => musterIsSvg($event['muster'] ?? null),
+    'logo_url'             => logoUrl($event['logo'] ?? null),
+    'gmaps_query'          => $gmaps_query,
 ]);

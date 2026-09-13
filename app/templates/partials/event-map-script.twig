@@ -1,0 +1,23 @@
+{% if has_map %}
+{% set _map_name = (lang == 'en' and event.name_en) ? event.name_en : event.name %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+(function () {
+  {% if interactive is defined and interactive == false %}
+  var map = L.map('event-map', { zoomControl: false, dragging: false, touchZoom: false, doubleClickZoom: false, scrollWheelZoom: false, boxZoom: false, keyboard: false, attributionControl: false }).setView([{{ event.lat }}, {{ event.lng }}], 15);
+  {% else %}
+  var map = L.map('event-map', { scrollWheelZoom: false, attributionControl: false }).setView([{{ event.lat }}, {{ event.lng }}], 15);
+  {% endif %}
+  L.tileLayer('https://tiles.stadiamaps.com/tiles/outdoors/{z}/{x}/{y}{r}.{ext}', {
+    minZoom: 0,
+    maxZoom: 20,
+    attribution: '&copy; <a href="https://www.stadiamaps.com/" target="_blank">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    ext: 'png'
+  }).addTo(map);
+  var marker = L.marker([{{ event.lat }}, {{ event.lng }}]).addTo(map);
+  {% if show_popup is defined and show_popup %}
+  marker.bindPopup('<strong>{{ event.ort_name ?: _map_name }}</strong>', { closeButton: false }).openPopup();
+  {% endif %}
+})();
+</script>
+{% endif %}

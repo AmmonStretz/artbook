@@ -28,18 +28,24 @@ $prog_stmt = db()->prepare("
 ");
 $prog_stmt->execute([$vid]);
 
+$today        = date('Y-m-d');
+$now_time     = date('H:i:s');
+// TODO: TEST-MODUS – vor Go-Live entfernen
+$today        = '2026-11-21';
+$now_time     = '15:30:00';
+$one_hour_ago = date('H:i:s', strtotime($now_time) - 3600);
+
 $program_by_day = [];
 foreach ($prog_stmt->fetchAll() as $e) {
+    if ($e['datum'] < $today || ($e['datum'] === $today && $e['uhrzeit'] < $one_hour_ago)) {
+        $e['prog_status'] = 'past';
+    } elseif ($e['datum'] === $today && $e['uhrzeit'] <= $now_time) {
+        $e['prog_status'] = 'live';
+    } else {
+        $e['prog_status'] = 'future';
+    }
     $program_by_day[$e['datum']][] = $e;
 }
-
-$today    = date('Y-m-d');
-$days     = array_keys($program_by_day);
-$active_tab = $days[0] ?? null;
-foreach ($days as $d) {
-    if ($d >= $today) { $active_tab = $d; break; }
-}
-if (in_array($today, $days)) $active_tab = $today;
 
 echo twig()->render('programm.twig', [
     'page_title'     => 'Programm – ' . $event['name'],
@@ -47,5 +53,7 @@ echo twig()->render('programm.twig', [
     'vid'            => $vid,
     'event'          => $event,
     'program_by_day' => $program_by_day,
-    'active_tab'     => $active_tab,
+    'date_today'     => $today,
+    'date_tomorrow'  => date('Y-m-d', strtotime('+1 day')),
+    'total_prog'     => array_sum(array_map('count', $program_by_day)),
 ]);

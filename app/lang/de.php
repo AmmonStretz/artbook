@@ -21,6 +21,7 @@ return [
     'event.view_all_participants' => 'Alle Teilnehmer ansehen',
     'event.back_home'             => 'Startseite',
     'event.badge'                 => 'Veranstaltung',
+    'event.venue'                 => 'Veranstaltungsort',
     'event.address'               => 'Adresse',
     'event.website'               => 'Website',
     'event.directions'            => 'Route planen',
@@ -54,6 +55,7 @@ return [
     // Participant page
     'participant.visit_website' => 'Website besuchen',
     'participant.members'       => 'Mitglieder',
+    'participant.past_members'  => 'Vergangene Mitglieder',
     'participant.events'        => 'Veranstaltungen',
     'participant.program'       => 'Programmpunkte',
     'participant.works'         => 'Werke',
@@ -100,6 +102,8 @@ return [
 
     // Time / misc
     'time.uhr'       => 'Uhr',
+    'time.today'     => 'Heute',
+    'time.tomorrow'  => 'Morgen',
     'site.description' => 'Die Buchmesse für Künstlerbücher, limitierte Editionen und unabhängige Publikationen. 20.–22. November 2026, Kunstquartier Bethanien, Berlin-Kreuzberg.',
     'og.locale'      => 'de_DE',
 ];

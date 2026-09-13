@@ -1,0 +1,378 @@
+{% extends 'base.twig' %}
+
+{% block head_extra %}
+<style>
+/* ── Override layout for full-screen canvas ── */
+html, body      { overflow: hidden; height: 100%; }
+.pub-wrap       { height: 100vh; overflow: hidden; }
+.pub-main       { flex: 1; min-height: 0; overflow: hidden; padding: 0 !important; gap: 0 !important; }
+.pub-footer     { display: none; }
+
+#nav-canvas     { background: url('/assets/wood-background.webp') repeat; }
+
+/* ── Viewport & canvas ── */
+#nav-viewport {
+  width: 100%;
+  height: 100%;
+  overflow: scroll;
+  cursor: grab;
+  user-select: none;
+  overscroll-behavior: none;
+  scrollbar-width: none;
+}
+#nav-viewport::-webkit-scrollbar { display: none; }
+#nav-viewport.dragging { cursor: grabbing; }
+
+#nav-canvas { position: relative; }
+
+/* ── Items (shared) ── */
+.nav-item { position: absolute; z-index: 10; }
+
+/* ── Vignette overlay (above images) ── */
+.nav-vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+  background: radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,.65) 100%);
+}
+
+/* ── Vignette texture (between background and images) ── */
+.nav-vignette-texture {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  background: radial-gradient(ellipse at center, transparent 20%, rgba(0,0,0,.45) 100%);
+}
+
+/* ── Center: event title image ── */
+.nav-center-item { z-index: 10; }
+.nav-center-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius);
+  filter: drop-shadow(0 6px 18px rgba(0,0,0,.6));
+}
+.nav-center-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: var(--black);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 1rem;
+  border-radius: var(--radius);
+  box-shadow: 0 4px 24px rgba(0,0,0,.18);
+}
+
+/* ── Artist items ── */
+.nav-artist-item {
+  display: block;
+  text-decoration: none;
+  border-radius: var(--radius);
+  transition: transform .2s;
+}
+.nav-artist-item        { transform: var(--rot, rotate(0deg)); transition: transform .25s ease; }
+.nav-artist-item:hover  { transform: rotate(0deg) scale(1.03); z-index: 20; }
+.nav-artist-item:hover .nav-artist-label { opacity: 1; }
+
+.nav-artist-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+  background: var(--border);
+  transition: filter .25s ease;
+}
+
+.nav-artist-label {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: var(--black);
+  color: #fff;
+  font-size: .72rem;
+  font-weight: 500;
+  padding: .25rem .55rem;
+  border-radius: var(--radius);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .15s;
+}
+
+
+/* ── Small screen notice ── */
+.nav-small-notice {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: var(--light);
+  z-index: 500;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+  font-size: 1rem;
+  color: var(--black);
+}
+@media (max-width: 900px) {
+  .nav-small-notice { display: flex; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="nav-small-notice">
+  Diese Ansicht ist für größere Bildschirme gedacht.<br>
+  Bitte öffne die Seite auf einem Desktop oder Tablet.
+</div>
+
+<div class="nav-vignette-texture"></div>
+<div class="nav-vignette"></div>
+
+<div id="nav-viewport">
+  <div id="nav-canvas">
+
+    {# ── Center: event title image ── #}
+    <div id="nav-center-item"
+         class="nav-item nav-center-item"
+         data-w="{{ center_w }}"
+         data-h="{{ center_h }}">
+      {% if center_url %}
+        <img src="{{ center_url }}" alt="{{ page_title }}" class="nav-center-img" width="{{ center_w }}" height="{{ center_h }}">
+      {% else %}
+        <div class="nav-center-fallback">{{ page_title }}</div>
+      {% endif %}
+    </div>
+
+    {# ── Artist images (lazy-loaded) ── #}
+    {% for img in images %}
+    <a href="{{ langUrl('/teilnehmer.php') }}?id={{ img.id }}&vid={{ vid }}"
+       class="nav-item nav-artist-item"
+       data-w="{{ img.w }}"
+       data-h="{{ img.h }}">
+      <img
+        data-src="{{ img.url }}"
+        alt="{{ img.name }}"
+        width="{{ img.w }}"
+        height="{{ img.h }}"
+        class="nav-artist-img">
+      <span class="nav-artist-label">{{ img.name }}</span>
+    </a>
+    {% endfor %}
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  'use strict';
+
+  // ── Layout ───────────────────────────────────────────────────────────
+  const IMAGE_SCALE         = 0.5;   // Skalierung der Teilnehmerbilder relativ zur _768-Version
+  const CENTER_IMAGE_WIDTH  = 450;   // Breite des Veranstaltungslogos in px
+  const MIN_GAP_BETWEEN     = 50;    // Mindestabstand zwischen zwei Kacheln in px
+  const CENTER_EXTRA_RADIUS = 180;   // Zusätzlicher Freiraum um das Zentrum herum in px
+  const CANVAS_MARGIN       = 100;   // Außenabstand des Canvas zur äußersten Kachel in px
+
+  // ── Schatten (Lichtquelle im Bildmittelpunkt) ─────────────────────────
+  const SHADOW_REF_DISTANCE = 500;   // Abstand von der Mitte, bei dem MAX_OFFSET gilt (px)
+  const SHADOW_MAX_OFFSET   = 20;    // Schattenversatz x/y bei REF_DISTANCE (px)
+  const SHADOW_BLUR         = 8;    // Unschärferadius des Schattens (px)
+  const SHADOW_ALPHA        = 0.55;  // Deckkraft des Schattens
+
+  const SHADOW_HOVER_BLUR       = 18;   // Unschärferadius bei Hover (px)
+  const SHADOW_HOVER_ALPHA      = 0.75; // Deckkraft bei Hover
+  const SHADOW_HOVER_SCALE      = 1.5;  // Versatzfaktor bei Hover
+  const SHADOW_HOVER_MIN_OFFSET = 8;    // Mindestversatz bei Hover, unabhängig von der Position (px)
+
+  const viewport = document.getElementById('nav-viewport');
+  const canvas   = document.getElementById('nav-canvas');
+  const items    = Array.from(document.querySelectorAll('.nav-item'));
+
+  const rects = items.map((el, i) => ({
+    el,
+    img:     i > 0 ? el.querySelector('.nav-artist-img') : null,
+    hovered: false,
+    w: Math.round(parseInt(el.dataset.w, 10) * IMAGE_SCALE),
+    h: Math.round(parseInt(el.dataset.h, 10) * IMAGE_SCALE),
+    x: 0,
+    y: 0,
+  }));
+
+  const center = rects[0];
+  center.w = CENTER_IMAGE_WIDTH;
+  center.h = Math.round(CENTER_IMAGE_WIDTH * (parseInt(items[0].dataset.h, 10) / parseInt(items[0].dataset.w, 10)));
+
+  const placed = [{
+    x: -center.w / 2,
+    y: -center.h / 2,
+    w: center.w,
+    h: center.h,
+  }];
+  center.x = placed[0].x;
+  center.y = placed[0].y;
+
+  const minR = Math.sqrt(center.w * center.w + center.h * center.h) / 2 + MIN_GAP_BETWEEN + CENTER_EXTRA_RADIUS;
+
+  for (let i = 1; i < rects.length; i++) {
+    const item = rects[i];
+    const pos  = findPosition(item.w, item.h, placed);
+    item.x = pos.x;
+    item.y = pos.y;
+    placed.push({ x: pos.x, y: pos.y, w: item.w, h: item.h });
+  }
+
+  function findPosition(w, h, placed) {
+    const stepR  = 40;
+    const startA = Math.random() * Math.PI * 2;
+    for (let r = minR; r < 12000; r += stepR) {
+      const steps = Math.max(48, Math.floor((2 * Math.PI * r) / 90));
+      for (let i = 0; i < steps; i++) {
+        const angle = startA + (i / steps) * Math.PI * 2;
+        const cx = Math.cos(angle) * r - w / 2;
+        const cy = Math.sin(angle) * r - h / 2;
+        if (!overlaps(cx, cy, w, h, placed)) return { x: cx, y: cy };
+      }
+    }
+    const rightEdge = placed.reduce((m, p) => Math.max(m, p.x + p.w), 0);
+    return { x: rightEdge + MIN_GAP_BETWEEN, y: 0 };
+  }
+
+  function overlaps(x, y, w, h, placed) {
+    for (const p of placed) {
+      if (x     < p.x + p.w + MIN_GAP_BETWEEN &&
+          x + w > p.x         - MIN_GAP_BETWEEN &&
+          y     < p.y + p.h   + MIN_GAP_BETWEEN &&
+          y + h > p.y         - MIN_GAP_BETWEEN) return true;
+    }
+    return false;
+  }
+
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const p of placed) {
+    minX = Math.min(minX, p.x);
+    minY = Math.min(minY, p.y);
+    maxX = Math.max(maxX, p.x + p.w);
+    maxY = Math.max(maxY, p.y + p.h);
+  }
+
+  const offX    = -minX + CANVAS_MARGIN;
+  const offY    = -minY + CANVAS_MARGIN;
+  const canvasW = maxX - minX + CANVAS_MARGIN * 2;
+  const canvasH = maxY - minY + CANVAS_MARGIN * 2;
+
+  canvas.style.width  = canvasW + 'px';
+  canvas.style.height = canvasH + 'px';
+
+  for (let i = 0; i < rects.length; i++) {
+    const r = rects[i];
+    r.el.style.left  = (r.x + offX) + 'px';
+    r.el.style.top   = (r.y + offY) + 'px';
+    r.el.style.width = r.w + 'px';
+    if (i > 0) {
+      const deg = (Math.random() * 4 - 2).toFixed(2);
+      r.el.style.setProperty('--rot', `rotate(${deg}deg)`);
+    }
+  }
+
+  viewport.scrollLeft = Math.round(center.x + offX + center.w / 2 - viewport.clientWidth  / 2);
+  viewport.scrollTop  = Math.round(center.y + offY + center.h / 2 - viewport.clientHeight / 2);
+
+  // ── Dynamischer Schatten (Lichtquelle = Bildmitte) ────────────────────
+  const shadowFactor = SHADOW_MAX_OFFSET / SHADOW_REF_DISTANCE;
+
+  function updateShadows() {
+    const cx = viewport.clientWidth  / 2;
+    const cy = viewport.clientHeight / 2;
+    for (const r of rects) {
+      if (!r.img) continue;
+      const rect = r.el.getBoundingClientRect();
+      const dx   = (rect.left + rect.width  / 2) - cx;
+      const dy   = (rect.top  + rect.height / 2) - cy;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      const nx   = dx / dist; // normalisierter Richtungsvektor
+      const ny   = dy / dist;
+
+      const blur  = r.hovered ? SHADOW_HOVER_BLUR  : SHADOW_BLUR;
+      const alpha = r.hovered ? SHADOW_HOVER_ALPHA : SHADOW_ALPHA;
+
+      // Basisversatz aus Lichtquellenberechnung + Mindestversatz bei Hover
+      const baseOffset = dist * shadowFactor * (r.hovered ? SHADOW_HOVER_SCALE : 1);
+      const minOffset  = r.hovered ? SHADOW_HOVER_MIN_OFFSET : 0;
+      const totalOffset = baseOffset + minOffset;
+
+      const sx = (nx * totalOffset).toFixed(1);
+      const sy = (ny * totalOffset).toFixed(1);
+      r.img.style.filter = `drop-shadow(${sx}px ${sy}px ${blur}px rgba(0,0,0,${alpha}))`;
+    }
+  }
+
+  let rafId = null;
+  viewport.addEventListener('scroll', () => {
+    if (rafId) return;
+    rafId = requestAnimationFrame(() => { rafId = null; updateShadows(); });
+  }, { passive: true });
+
+  for (const r of rects.slice(1)) {
+    r.el.addEventListener('mouseenter', () => { r.hovered = true;  updateShadows(); });
+    r.el.addEventListener('mouseleave', () => { r.hovered = false; updateShadows(); });
+  }
+
+  updateShadows();
+
+  // Lazy loading
+  const io = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue;
+      const img = entry.target;
+      if (img.dataset.src) {
+        img.src = img.dataset.src;
+        img.removeAttribute('data-src');
+        io.unobserve(img);
+      }
+    }
+  }, { root: viewport, rootMargin: '400px' });
+  document.querySelectorAll('.nav-artist-img').forEach(img => io.observe(img));
+
+  // Drag-to-scroll
+  let isDragging = false, dragStartX, dragStartY, scrollStartX, scrollStartY;
+  viewport.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    isDragging = true;
+    dragStartX = e.clientX; dragStartY = e.clientY;
+    scrollStartX = viewport.scrollLeft; scrollStartY = viewport.scrollTop;
+    viewport.classList.add('dragging');
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', e => {
+    if (!isDragging) return;
+    viewport.scrollLeft = scrollStartX - (e.clientX - dragStartX);
+    viewport.scrollTop  = scrollStartY - (e.clientY - dragStartY);
+  });
+  window.addEventListener('mouseup', () => {
+    isDragging = false;
+    viewport.classList.remove('dragging');
+  });
+  viewport.addEventListener('click', e => {
+    const dx = Math.abs(viewport.scrollLeft - scrollStartX);
+    const dy = Math.abs(viewport.scrollTop  - scrollStartY);
+    if (dx > 4 || dy > 4) e.preventDefault();
+  }, true);
+
+})();
+</script>
+{% endblock %}

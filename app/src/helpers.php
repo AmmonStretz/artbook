@@ -34,11 +34,8 @@ function fmtWeekdayShort(string $d): string {
     return $map[$en] ?? substr($en, 0, 3);
 }
 
-function typeLabel(string $typ, ?string $gruppe_typ = null): string {
-    if ($typ === 'kuenstler') return t('type.artist');
-    if ($gruppe_typ === 'verlag')  return t('type.verlag');
-    if ($gruppe_typ === 'edition') return t('type.edition');
-    return t('type.group');
+function typeLabel(?string $kategorie): string {
+    return TEILNEHMER_KATEGORIEN[$kategorie ?? 'kuenstler'] ?? ucfirst($kategorie ?? 'Künstler');
 }
 
 function bildUrl(?string $dateiname): ?string {
@@ -55,18 +52,47 @@ function thumbUrl(?string $dateiname): ?string {
     return file_exists($p) ? IMG_UPLOAD_URL . $stem . '_768.jpg' : IMG_UPLOAD_URL . $dateiname;
 }
 
-function titelbildHeroUrl(?string $dateiname): ?string {
-    if (!$dateiname) return null;
-    $stem  = pathinfo($dateiname, PATHINFO_FILENAME);
-    $p1024 = IMG_UPLOAD_DIR . $stem . '_1024.jpg';
-    return file_exists($p1024) ? IMG_UPLOAD_URL . $stem . '_1024.jpg' : IMG_UPLOAD_URL . $dateiname;
+function musterIsSvg(?string $dateiname): bool {
+    return $dateiname !== null && strtolower(pathinfo($dateiname, PATHINFO_EXTENSION)) === 'svg';
 }
 
-function titelbildCardUrl(?string $dateiname): ?string {
+function musterFullpageUrl(?string $dateiname, string $size = 'lg'): ?string {
     if (!$dateiname) return null;
+    if (musterIsSvg($dateiname)) return IMG_MUSTER_UPLOAD_URL . $dateiname;
     $stem = pathinfo($dateiname, PATHINFO_FILENAME);
-    $p768 = IMG_UPLOAD_DIR . $stem . '_768.jpg';
-    return file_exists($p768) ? IMG_UPLOAD_URL . $stem . '_768.jpg' : IMG_UPLOAD_URL . $dateiname;
+    return IMG_MUSTER_UPLOAD_URL . $stem . '_fp_' . $size . '.webp';
+}
+
+function musterFullpageSrcset(?string $dateiname): string {
+    if (!$dateiname || musterIsSvg($dateiname)) return '';
+    $stem = pathinfo($dateiname, PATHINFO_FILENAME);
+    return implode(', ', array_map(
+        fn($key, $wh) => IMG_MUSTER_UPLOAD_URL . $stem . '_fp_' . $key . '.webp ' . $wh[0] . 'w',
+        array_keys(IMG_MUSTER_FULLPAGE_SIZES),
+        IMG_MUSTER_FULLPAGE_SIZES
+    ));
+}
+
+function musterBannerUrl(?string $dateiname, string $size = 'lg'): ?string {
+    if (!$dateiname) return null;
+    if (musterIsSvg($dateiname)) return IMG_MUSTER_UPLOAD_URL . $dateiname;
+    $stem = pathinfo($dateiname, PATHINFO_FILENAME);
+    return IMG_MUSTER_UPLOAD_URL . $stem . '_bn_' . $size . '.webp';
+}
+
+function musterBannerSrcset(?string $dateiname): string {
+    if (!$dateiname || musterIsSvg($dateiname)) return '';
+    $stem = pathinfo($dateiname, PATHINFO_FILENAME);
+    return implode(', ', array_map(
+        fn($key, $wh) => IMG_MUSTER_UPLOAD_URL . $stem . '_bn_' . $key . '.webp ' . $wh[0] . 'w',
+        array_keys(IMG_MUSTER_BANNER_SIZES),
+        IMG_MUSTER_BANNER_SIZES
+    ));
+}
+
+function logoUrl(?string $dateiname): ?string {
+    if (!$dateiname) return null;
+    return IMG_LOGO_UPLOAD_URL . $dateiname;
 }
 
 function buildQuery(array $params): string {
